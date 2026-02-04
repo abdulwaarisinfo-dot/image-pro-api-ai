@@ -1,0 +1,20 @@
+# Credentials & Secrets
+.env
+
+# Virtual Environment
+venv/
+env/
+/env
+
+# Image Storage (Crucial for your app)
+uploads/
+processed/
+
+# Python cache
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# OS specific files
+.DS_Store
+Thumbs.db
