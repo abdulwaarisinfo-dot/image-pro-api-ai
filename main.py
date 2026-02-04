@@ -32,7 +32,7 @@ logger = logging.getLogger("ImageAI_Pro")
 # =========================================================
 # CONFIG
 # =========================================================
-MONGO_URI = os.getenv("MONGO_URI")  # MongoDB Atlas URI (mongodb+srv://...)
+MONGO_URI = os.getenv("MONGO_URI", "").strip()  # MongoDB Atlas URI (mongodb+srv://...)
 JWT_SECRET = os.getenv("JWT_SECRET_KEY", "super-secret-key")
 CLIPDROP_API_KEY = os.getenv("CLIPDROP_API_KEY", "")
 ALGORITHM = "HS256"
@@ -57,14 +57,14 @@ def verify_password(password: str, hashed: str) -> bool:
 try:
     client = MongoClient(
         MONGO_URI,
-        tls=True,                 # force TLS/SSL
-        tlsCAFile=certifi.where(),# proper CA bundle
+        tls=True,                  # force TLS/SSL
+        tlsCAFile=certifi.where(), # proper CA bundle
         serverSelectionTimeoutMS=10000  # 10 seconds timeout
     )
     db = client["image_ai"]
     users_col = db["users"]
     # Test connection immediately
-    client.admin.command('ping')
+    client.admin.command("ping")
     logger.info("MongoDB connected successfully")
 except Exception as e:
     logger.error(f"MongoDB connection failed: {e}")
@@ -73,11 +73,12 @@ except Exception as e:
 # =========================================================
 # FASTAPI APP
 # =========================================================
-app = FastAPI(title="ImageAI Pro API",
-              docs_url= None,
-              redoc_url=None,
-              openapi_url=None
-             )
+app = FastAPI(
+    title="ImageAI Pro API",
+    docs_url=None,
+    redoc_url=None,
+    openapi_url=None
+)
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
@@ -147,8 +148,10 @@ async def me(user: dict = Depends(get_current_user)):
 
 # -------------------- IMAGE UPLOAD --------------------
 @app.post("/images/upload")
-async def upload_image(file: UploadFile = File(...), user: dict = Depends(get_current_user)):
-
+async def upload_image(
+    file: UploadFile = File(...),
+    user: dict = Depends(get_current_user)
+):
     ext = os.path.splitext(file.filename)[1].lower()
     if ext not in [".png", ".jpg", ".jpeg", ".jfif"]:
         raise HTTPException(status_code=400, detail="Only PNG or JPG images are supported")
@@ -158,12 +161,10 @@ async def upload_image(file: UploadFile = File(...), user: dict = Depends(get_cu
     ai_path = os.path.join(UPLOAD_DIR, f"{image_id}_ai.png")
     output_path = os.path.join(OUTPUT_DIR, f"{image_id}_processed.png")
 
-    # Save uploaded file
     contents = await file.read()
     with open(input_path, "wb") as f:
         f.write(contents)
 
-    # Detect original size
     with Image.open(input_path) as img:
         orig_width, orig_height = img.size
 
@@ -172,9 +173,6 @@ async def upload_image(file: UploadFile = File(...), user: dict = Depends(get_cu
     processed_source = input_path
     ai_used = False
 
-    # =====================================================
-    # ClipDrop Upscaling (8K → fallback 4K → resize back)
-    # =====================================================
     if CLIPDROP_API_KEY:
         try:
             logger.info("ClipDrop detected → Trying 8K upscale")
@@ -214,7 +212,6 @@ async def upload_image(file: UploadFile = File(...), user: dict = Depends(get_cu
     else:
         logger.warning("CLIPDROP_API_KEY missing → Serving original image")
 
-    # Resize back to original size
     with Image.open(processed_source) as img:
         logger.info(f"Processed image size → {img.size[0]}x{img.size[1]}")
         final_img = img.resize((orig_width, orig_height), Image.LANCZOS)
@@ -224,7 +221,10 @@ async def upload_image(file: UploadFile = File(...), user: dict = Depends(get_cu
         f"Final returned size → {orig_width}x{orig_height} | AI used: {ai_used}"
     )
 
-    users_col.update_one({"email": user["email"]}, {"$inc": {"images_used": 1}})
+    users_col.update_one(
+        {"email": user["email"]},
+        {"$inc": {"images_used": 1}}
+    )
 
     return {
         "status": "success",
@@ -274,7 +274,7 @@ def seed_users():
             "expires_at": datetime.utcnow() + timedelta(days=34)
         }
     ]
-    
+
     added = 0
     for u in users:
         if not users_col.find_one({"email": u["email"]}):
@@ -295,7 +295,7 @@ def reset_password(email: str, new_password: str):
     )
     return {"message": "Password reset successful"}
 
-# ---------------------- Renew user --------------------
+# -------------------- Renew user --------------------
 @app.post("/admin/renew", tags=["Admin"])
 def renew_user(
     email: str,
@@ -307,7 +307,10 @@ def renew_user(
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
-    update = {"expires_at": datetime.utcnow() + timedelta(days=extra_days), "active": True}
+    update = {
+        "expires_at": datetime.utcnow() + timedelta(days=extra_days),
+        "active": True
+    }
     if reset_counter:
         update["images_used"] = 0
     if new_image_limit is not None:
