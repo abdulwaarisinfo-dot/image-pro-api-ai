@@ -7,11 +7,27 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, updateDoc, increment, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Global Firebase Configuration
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'imggen-pro-v1';
+
+        window.db = db;
+        window.auth = auth;
+        window.appId = appId;
+    </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
         :root {
-            --accent: #10b981; 
+            --accent: #10b981;
             --accent-glow: rgba(16, 185, 129, 0.3);
             --bg-deep: #050505;
             --panel: rgba(15, 15, 15, 0.85);
@@ -27,8 +43,6 @@
             margin: 0;
         }
 
-        * { transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1); }
-        
         .custom-scroll::-webkit-scrollbar { width: 4px; }
         .custom-scroll::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
 
@@ -36,13 +50,12 @@
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
             z-index: 0; pointer-events: none;
-            opacity: 0.3;
+            opacity: 0.25;
         }
 
         .glass-panel {
             background: var(--panel);
             backdrop-filter: blur(24px);
-            -webkit-backdrop-filter: blur(24px);
             border: 1px solid var(--border);
         }
 
@@ -51,39 +64,44 @@
             color: black;
             font-weight: 700;
             border-radius: 14px;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
             display: inline-flex;
             align-items: center;
             justify-content: center;
         }
-        
+
         .btn-premium:hover {
             transform: translateY(-2px);
-            box-shadow: 0 12px 40px -10px rgba(255,255,255,0.3);
+            box-shadow: 0 12px 30px -10px rgba(255, 255, 255, 0.4);
+        }
+
+        .btn-premium:disabled {
+            background: #222; color: #555; transform: none; box-shadow: none; cursor: not-allowed;
         }
 
         .comparison-slider {
             position: relative;
             width: 100%;
             aspect-ratio: 16/9;
-            max-width: 900px;
+            max-width: 800px;
             overflow: hidden;
             border-radius: 24px;
             border: 1px solid var(--border);
             touch-action: none;
         }
-        
+
         .comparison-img {
             position: absolute;
             top: 0; left: 0; width: 100%; height: 100%;
             object-fit: cover;
         }
-        
+
         .comparison-after {
             width: 50%;
             z-index: 1;
             border-right: 2px solid white;
         }
-        
+
         .comparison-handle {
             position: absolute;
             top: 50%; left: 50%;
@@ -94,32 +112,18 @@
             border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
             color: black;
-            box-shadow: 0 0 30px rgba(0,0,0,0.5);
+            box-shadow: 0 0 30px rgba(0,0,0,0.8);
+            cursor: ew-resize;
         }
 
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(15px); } to { opacity: 1; transform: translateY(0); } }
         .animate-premium { animation: fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
 
-        #mobile-sidebar-overlay {
-            background: rgba(0,0,0,0.8);
-            backdrop-filter: blur(4px);
-            display: none;
-            position: fixed;
-            inset: 0;
-            z-index: 40;
-        }
-        
+        /* Mobile specific adjustments */
         @media (max-width: 768px) {
-            #app-sidebar {
-                position: fixed;
-                left: -100%;
-                top: 0;
-                height: 100%;
-                z-index: 50;
-                transition: left 0.3s ease;
-            }
-            #app-sidebar.active { left: 0; }
-            #mobile-sidebar-overlay.active { display: block; }
+            .app-sidebar { display: none; }
+            .mobile-stats { display: flex !important; }
+            .hero-text { font-size: 2.5rem !important; }
         }
     </style>
 </head>
@@ -129,107 +133,100 @@
 
 <!-- Landing Page -->
 <div id="welcome-screen" class="fixed inset-0 z-[100] overflow-y-auto bg-black flex flex-col items-center">
-    <nav class="w-full max-w-7xl px-6 md:px-12 h-20 md:h-24 flex items-center justify-between z-10">
+    <nav class="w-full max-w-7xl px-6 md:px-8 h-20 md:h-24 flex items-center justify-between z-10">
         <div class="flex items-center gap-2">
-            <div class="w-8 h-8 bg-emerald-500 rounded-lg"></div>
-            <span class="text-xl font-black tracking-tighter">IMGGEN</span>
+            <div class="w-8 h-8 bg-emerald-500 rounded-lg shadow-[0_0_20px_rgba(16,185,129,0.4)]"></div>
+            <span class="text-xl font-bold tracking-tighter">IMGGEN</span>
         </div>
-        <div class="flex gap-4 md:gap-6 items-center">
-            <button onclick="showLogin()" class="text-sm font-bold hover:text-emerald-400 hidden sm:block">Sign In</button>
-            <button onclick="showLogin()" class="px-6 py-2.5 bg-white text-black text-xs md:text-sm font-black rounded-full uppercase tracking-tighter">Get Started</button>
+        <div class="flex gap-4">
+            <button onclick="showLogin()" class="text-xs font-bold uppercase tracking-widest hover:text-emerald-400 hidden sm:block">Sign In</button>
+            <button onclick="showLogin()" class="px-6 py-2.5 bg-white text-black text-xs font-bold rounded-full uppercase tracking-widest shadow-lg">Get Started</button>
         </div>
     </nav>
 
-    <div class="max-w-5xl w-full px-6 py-8 md:py-16 text-center z-10">
+    <div class="max-w-5xl w-full px-6 md:px-8 py-10 md:py-16 text-center z-10">
         <div class="animate-premium opacity-0">
-            <h1 class="text-4xl md:text-7xl font-black tracking-tight mb-6 leading-[1.1]">
-                Cinematic <span class="text-emerald-500">8K Quality</span><br class="hidden md:block"> from any image.
+            <h1 class="hero-text text-4xl md:text-7xl font-bold tracking-tight mb-6 leading-[1.1]">
+                Cinematic <span class="text-emerald-500">8K Quality</span><br>from any resolution.
             </h1>
-            <p class="text-zinc-400 text-base md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed font-medium">
-                The world's most advanced neural reconstruction engine. Elevate your photography and digital art to 8K masterworks instantly.
+            <p class="text-zinc-400 text-base md:text-xl max-w-2xl mx-auto mb-10 leading-relaxed">
+                The world's most advanced neural reconstruction engine. Elevate your photography, digital art, and textures to 8K masterworks instantly.
             </p>
             
-            <div class="mb-12 relative group cursor-crosshair" id="how-it-works">
-                <div class="comparison-slider mx-auto shadow-2xl">
-                    <img src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1200&auto=format&fit=crop" class="comparison-img blur-sm opacity-50">
+            <div class="mb-12 relative group" id="how-it-works">
+                <div class="comparison-slider mx-auto shadow-2xl shadow-emerald-500/10">
+                    <img src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1200" class="comparison-img blur-sm grayscale opacity-60">
                     <div class="comparison-after comparison-img overflow-hidden" id="slider-box">
-                        <img src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1200&auto=format&fit=crop" class="comparison-img" style="width: 100vw; max-width: 900px;">
+                        <img src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1200" class="comparison-img" style="width: 800px; max-width: none;">
                     </div>
                     <div class="comparison-handle" id="slider-handle"><i class="fas fa-arrows-left-right"></i></div>
                     
-                    <div class="absolute bottom-4 left-4 z-10 text-[9px] md:text-[10px] font-black tracking-widest uppercase bg-black/60 px-3 py-1.5 rounded-lg border border-white/10">Source (720p)</div>
-                    <div class="absolute bottom-4 right-4 z-10 text-[9px] md:text-[10px] font-black tracking-widest uppercase bg-emerald-500 text-black px-3 py-1.5 rounded-lg shadow-xl">Neural 8K</div>
+                    <div class="absolute bottom-4 left-4 z-10 text-[9px] font-bold tracking-widest uppercase bg-black/60 backdrop-blur-md px-3 py-1.5 rounded">Source (Low Res)</div>
+                    <div class="absolute bottom-4 right-4 z-10 text-[9px] font-bold tracking-widest uppercase bg-emerald-500 text-black px-3 py-1.5 rounded-sm shadow-xl">Neural 8K</div>
                 </div>
-                <p class="mt-6 text-[10px] text-zinc-500 font-bold uppercase tracking-[0.2em] animate-pulse text-center">Swipe or drag to compare</p>
             </div>
 
             <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                <button onclick="showLogin()" class="btn-premium w-full sm:w-auto px-10 py-5 text-xs uppercase tracking-[0.15em]">Start Processing</button>
-                <button onclick="togglePricing(true)" class="w-full sm:w-auto px-10 py-5 border border-zinc-800 hover:bg-zinc-900 rounded-2xl text-xs font-black uppercase tracking-[0.15em] transition-all">View Pricing</button>
+                <button onclick="showLogin()" class="btn-premium px-10 py-4 text-xs uppercase tracking-widest w-full sm:w-auto">Start Processing</button>
+                <button onclick="togglePricing(true)" class="px-10 py-4 border border-zinc-800 hover:bg-zinc-900 rounded-xl text-xs font-bold transition-all uppercase tracking-widest w-full sm:w-auto">View Pricing</button>
             </div>
         </div>
     </div>
 </div>
 
-<!-- Pricing Modal -->
-<div id="pricing-screen" class="hidden fixed inset-0 z-[120] flex items-center justify-center bg-black/95 backdrop-blur-3xl p-4 overflow-y-auto">
+<!-- Pricing Modal (Updated to WhatsApp) -->
+<div id="pricing-screen" class="hidden fixed inset-0 z-[120] flex items-center justify-center bg-black/95 backdrop-blur-2xl p-6 overflow-y-auto">
     <div class="max-w-6xl w-full py-10 animate-premium">
-        <div class="text-center mb-12 md:mb-16">
-            <h2 class="text-3xl md:text-5xl font-black mb-4">Precision Plans</h2>
-            <p class="text-zinc-500 font-medium">Unlock full neural capacity for high-scale workflows.</p>
+        <div class="text-center mb-12">
+            <h2 class="text-4xl font-bold mb-4">Precision Plans</h2>
+            <p class="text-zinc-500">Professional licensing and high-speed GPU processing.</p>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <!-- Solo -->
-            <div class="glass-panel p-8 md:p-10 rounded-[32px] hover:border-emerald-500/30 transition-all flex flex-col">
-                <h4 class="text-zinc-500 text-[10px] font-black uppercase tracking-[0.2em] mb-4">Solo</h4>
-                <div class="text-5xl font-black mb-8">$0<span class="text-sm text-zinc-600 font-bold ml-2">/mo</span></div>
-                <ul class="text-sm text-zinc-400 space-y-4 mb-10 flex-1">
-                    <li class="flex items-center gap-3"><i class="fas fa-check text-emerald-500"></i> 5 Upscales / Mo</li>
-                    <li class="flex items-center gap-3"><i class="fas fa-check text-emerald-500"></i> 2K Upscaling</li>
-                    <li class="flex items-center gap-3 opacity-30"><i class="fas fa-times"></i> Commercial Rights</li>
+            <div class="glass-panel p-8 md:p-10 rounded-[32px]">
+                <h4 class="text-zinc-500 text-[10px] font-bold uppercase tracking-[0.2em] mb-4">Solo</h4>
+                <div class="text-5xl font-bold mb-8">$0</div>
+                <ul class="text-sm text-zinc-400 space-y-4 mb-10">
+                    <li class="flex items-center gap-3"><i class="fas fa-check text-emerald-500"></i> 10 Free Tokens</li>
+                    <li class="flex items-center gap-3"><i class="fas fa-check text-emerald-500"></i> Standard Speed</li>
                 </ul>
-                <button onclick="window.open('https://wa.me/92835847587')" class="w-full py-4 rounded-2xl border border-white/10 text-[10px] font-black tracking-widest hover:bg-white hover:text-black uppercase">Select Solo</button>
+                <button onclick="showLogin()" class="w-full py-4 rounded-xl border border-white/10 text-[10px] font-bold uppercase tracking-widest hover:bg-white hover:text-black">SELECT LITE</button>
             </div>
-            <!-- Pro -->
-            <div class="glass-panel p-8 md:p-10 rounded-[32px] border-2 border-emerald-500/50 bg-emerald-500/[0.03] relative scale-105 shadow-2xl flex flex-col">
-                <div class="absolute -top-4 left-1/2 -translate-x-1/2 bg-emerald-500 text-black text-[9px] font-black px-4 py-1.5 rounded-full tracking-widest uppercase">Popular</div>
-                <h4 class="text-emerald-500 text-[10px] font-black uppercase tracking-[0.2em] mb-4">Master</h4>
-                <div class="text-5xl font-black mb-8">$49<span class="text-sm text-emerald-900 font-bold ml-2">/mo</span></div>
-                <ul class="text-sm text-zinc-200 space-y-4 mb-10 flex-1">
-                    <li class="flex items-center gap-3"><i class="fas fa-check text-emerald-500"></i> 500 High-Res Tokens</li>
-                    <li class="flex items-center gap-3"><i class="fas fa-check text-emerald-500"></i> 8K Deep Reconstruction</li>
-                    <li class="flex items-center gap-3"><i class="fas fa-check text-emerald-500"></i> Priority GPU Lane</li>
+            <div class="glass-panel p-8 md:p-10 rounded-[32px] border-emerald-500/40 bg-emerald-500/[0.03] scale-105 shadow-2xl">
+                <h4 class="text-emerald-500 text-[10px] font-bold uppercase tracking-[0.2em] mb-4">Master</h4>
+                <div class="text-5xl font-bold mb-8">$49</div>
+                <ul class="text-sm text-zinc-200 space-y-4 mb-10">
+                    <li class="flex items-center gap-3"><i class="fas fa-check text-emerald-500"></i> 500 HQ Tokens</li>
+                    <li class="flex items-center gap-3"><i class="fas fa-check text-emerald-500"></i> 8K Deep Engine</li>
                 </ul>
-                <button onclick="window.open('https://wa.me/92835847587')" class="btn-premium w-full bg-emerald-500 text-black py-4 uppercase text-[10px] tracking-widest">Go Master</button>
+                <button onclick="window.open('https://wa.me/928377465745?text=Hi, I want to upgrade to the Master Plan on ImgGen', '_blank')" class="btn-premium w-full bg-emerald-500 text-black py-4 text-[10px] uppercase tracking-widest">GET ACCESS VIA WHATSAPP</button>
             </div>
-            <!-- Studio -->
-            <div class="glass-panel p-8 md:p-10 rounded-[32px] flex flex-col">
-                <h4 class="text-zinc-500 text-[10px] font-black uppercase tracking-[0.2em] mb-4">Studio</h4>
-                <div class="text-5xl font-black mb-8">$199<span class="text-sm text-zinc-600 font-bold ml-2">/mo</span></div>
-                <ul class="text-sm text-zinc-400 space-y-4 mb-10 flex-1">
-                    <li class="flex items-center gap-3"><i class="fas fa-check text-emerald-500"></i> Unlimited Neural Calls</li>
-                    <li class="flex items-center gap-3"><i class="fas fa-check text-emerald-500"></i> Multi-user Access</li>
-                    <li class="flex items-center gap-3"><i class="fas fa-check text-emerald-500"></i> Dedicated Support</li>
+            <div class="glass-panel p-8 md:p-10 rounded-[32px]">
+                <h4 class="text-zinc-500 text-[10px] font-bold uppercase tracking-[0.2em] mb-4">Studio</h4>
+                <div class="text-5xl font-bold mb-8">$199</div>
+                <ul class="text-sm text-zinc-400 space-y-4 mb-10">
+                    <li class="flex items-center gap-3"><i class="fas fa-check text-emerald-500"></i> Unlimited Calls</li>
+                    <li class="flex items-center gap-3"><i class="fas fa-check text-emerald-500"></i> API Endpoints</li>
                 </ul>
-                <button onclick="window.open('https://wa.me/92835847587')" class="w-full py-4 rounded-2xl border border-white/10 text-[10px] font-black tracking-widest hover:bg-white hover:text-black uppercase">Contact Studio</button>
+                <button onclick="window.open('https://wa.me/928377465745?text=Hi, I am interested in the Studio Enterprise Plan', '_blank')" class="w-full py-4 rounded-xl border border-white/10 text-[10px] font-bold uppercase tracking-widest hover:bg-white hover:text-black">CONTACT SALES</button>
             </div>
         </div>
-        <button onclick="togglePricing(false)" class="mt-12 block mx-auto text-zinc-500 hover:text-white font-black text-[10px] uppercase tracking-[0.3em]">Close Pricing</button>
+        <button onclick="togglePricing(false)" class="mt-12 block mx-auto text-zinc-500 hover:text-white font-bold text-[10px] uppercase tracking-[0.3em]">Close Pricing</button>
     </div>
 </div>
 
 <!-- Login Modal -->
-<div id="login-view" class="hidden fixed inset-0 z-[130] flex items-center justify-center bg-black/90 backdrop-blur-3xl p-4">
-    <div class="w-full max-w-md glass-panel p-8 md:p-12 rounded-[40px] animate-premium shadow-2xl">
+<div id="login-view" class="hidden fixed inset-0 z-[130] flex items-center justify-center bg-black/90 backdrop-blur-3xl px-6">
+    <div class="w-full max-w-md glass-panel p-10 md:p-12 rounded-[40px] animate-premium shadow-2xl">
         <div class="text-center mb-10">
-            <h3 class="text-3xl font-black text-white mb-2">Access Portal</h3>
-            <p class="text-zinc-500 text-sm font-medium">Enter your credentials to continue.</p>
+            <h3 class="text-3xl font-bold text-white mb-2">Access Portal</h3>
+            <p class="text-zinc-500 text-sm">Sign in to your neural workspace.</p>
         </div>
         <div class="space-y-4">
-            <input type="email" id="login-email" placeholder="Email Address" class="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-emerald-500/50 transition-all font-medium">
-            <input type="password" id="login-password" placeholder="Password" class="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-emerald-500/50 transition-all font-medium">
-            <button onclick="doLogin()" class="btn-premium w-full py-4 mt-4 bg-emerald-500 hover:bg-emerald-400 uppercase text-[11px] tracking-widest">Sign In</button>
-            <button onclick="hideLogin()" class="w-full py-2 text-zinc-600 text-[10px] font-black tracking-[0.2em] hover:text-zinc-400 uppercase">Cancel</button>
+            <input type="email" id="login-email" placeholder="Email Address" class="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-emerald-500/50 text-white placeholder:text-zinc-600">
+            <input type="password" id="login-password" placeholder="Password" class="w-full px-6 py-4 bg-white/5 border border-white/10 rounded-2xl outline-none focus:border-emerald-500/50 text-white placeholder:text-zinc-600">
+            <div id="login-error" class="hidden text-rose-500 text-[9px] font-bold uppercase tracking-widest text-center py-2">Invalid user credentials or does not exist</div>
+            <button onclick="handleLoginAction()" class="btn-premium w-full py-4 mt-4 bg-emerald-500 hover:bg-emerald-400 text-xs uppercase tracking-[0.2em]">Enter Neural Lab</button>
+            <button onclick="hideLogin()" class="w-full py-2 text-zinc-600 text-[10px] font-bold tracking-widest hover:text-zinc-400 uppercase">Cancel</button>
         </div>
     </div>
 </div>
@@ -237,92 +234,85 @@
 <!-- Main App UI -->
 <main id="app-view" class="hidden relative z-10 flex flex-col h-full w-full bg-[#050505]">
     <header class="h-20 border-b border-white/5 flex items-center justify-between px-6 md:px-10 bg-black/50 backdrop-blur-md">
-        <div class="flex items-center gap-4 md:gap-8">
-            <button onclick="toggleMobileSidebar()" class="md:hidden text-white"><i class="fas fa-bars text-xl"></i></button>
+        <div class="flex items-center gap-6">
             <div class="flex items-center gap-2">
                 <div class="w-6 h-6 bg-emerald-500 rounded-md"></div>
-                <h2 class="font-black tracking-tighter text-lg uppercase">IMGGEN</h2>
+                <h2 class="font-bold tracking-tighter text-lg uppercase hidden sm:block">IMGGEN</h2>
             </div>
-            <nav class="hidden md:flex gap-6 text-[10px] font-black uppercase tracking-widest text-zinc-500">
-                <a href="#" class="text-white border-b-2 border-emerald-500 pb-1">Studio</a>
-                <a href="#" class="hover:text-zinc-300">History</a>
-            </nav>
+            <div class="mobile-stats hidden items-center gap-2 px-3 py-1 bg-zinc-900 border border-white/5 rounded-full">
+                <span class="text-[9px] font-bold text-emerald-500 uppercase tracking-widest"><span id="usage-val-mobile">--</span> Tokens</span>
+            </div>
         </div>
         <div class="flex items-center gap-4">
-            <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-zinc-900 border border-white/5 rounded-full">
-                <span class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span class="text-[9px] font-black uppercase tracking-widest text-emerald-500">Ultra Engine V4</span>
+            <div class="hidden md:flex items-center gap-2 px-4 py-1.5 bg-zinc-900 border border-white/5 rounded-full">
+                <span class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_10px_#10b981]"></span>
+                <span class="text-[9px] font-bold uppercase tracking-widest text-emerald-500">Live Engine Reconstruction</span>
             </div>
-            <button onclick="logout()" class="w-10 h-10 rounded-full bg-zinc-900 flex items-center justify-center border border-white/10 hover:border-emerald-500 transition-colors">
-                <i class="fas fa-sign-out-alt text-xs text-zinc-500"></i>
+            <button onclick="logout()" class="w-10 h-10 rounded-full bg-zinc-900 flex items-center justify-center border border-white/10 hover:border-emerald-500 transition-all">
+                <i class="fas fa-sign-out-alt text-zinc-500"></i>
             </button>
         </div>
     </header>
 
-    <div class="flex-1 flex overflow-hidden relative">
-        <div id="mobile-sidebar-overlay" onclick="toggleMobileSidebar()"></div>
-        
-        <aside id="app-sidebar" class="w-72 md:w-80 border-r border-white/5 p-8 md:p-10 space-y-10 bg-zinc-950/80 md:bg-zinc-950/30 backdrop-blur-3xl md:backdrop-blur-none">
+    <div class="flex-1 flex overflow-hidden">
+        <!-- Dashboard Sidebar -->
+        <aside class="app-sidebar w-80 border-r border-white/5 p-10 space-y-12 bg-zinc-950/30">
             <div class="space-y-4">
-                <p class="text-[10px] uppercase tracking-[0.2em] text-zinc-500 font-black">Quota Management</p>
+                <p class="text-[10px] uppercase tracking-[0.3em] text-zinc-500 font-bold">Quota Metrics</p>
                 <div class="p-6 glass-panel rounded-3xl border-white/5">
                     <div class="flex justify-between items-end mb-4">
-                        <span id="usage-val" class="text-4xl font-black tracking-tighter">--</span>
-                        <span class="text-[9px] font-black text-zinc-500 mb-1 tracking-widest uppercase">Tokens Left</span>
+                        <span id="usage-val" class="text-4xl font-bold">--</span>
+                        <span class="text-[9px] font-bold text-zinc-600 mb-1 tracking-[0.1em]">AVAILABLE</span>
                     </div>
-                    <div class="h-1.5 w-full bg-zinc-900 rounded-full overflow-hidden">
-                        <div id="usage-bar" class="h-full bg-emerald-500 transition-all duration-1000" style="width:0%"></div>
+                    <div class="h-2 w-full bg-zinc-900 rounded-full overflow-hidden">
+                        <div id="usage-bar" class="h-full bg-emerald-500 transition-all duration-1000 shadow-[0_0_10px_rgba(16,185,129,0.5)]" style="width:0%"></div>
                     </div>
-                    <p id="usage-text" class="text-[9px] text-zinc-600 mt-4 font-black uppercase tracking-[0.1em] text-center">Initializing...</p>
+                    <p id="usage-text" class="text-[8px] text-zinc-600 mt-4 font-bold uppercase tracking-[0.2em] text-center">Synchronizing cloud database...</p>
                 </div>
             </div>
 
             <div class="space-y-4">
-                <p class="text-[10px] uppercase tracking-[0.2em] text-zinc-500 font-black">System Info</p>
-                <div class="space-y-1">
-                    <div class="flex justify-between items-center py-3 border-b border-white/5">
-                        <span class="text-[10px] font-bold text-zinc-500 uppercase">Resolution</span>
-                        <span class="text-[10px] text-emerald-500 font-black uppercase">Native 8K</span>
-                    </div>
+                <p class="text-[10px] uppercase tracking-[0.3em] text-zinc-500 font-bold">Hardware Acceleration</p>
+                <div class="space-y-2">
+                    <div class="flex justify-between text-[11px] p-3 border-b border-white/5"><span class="text-zinc-500">Neural Unit</span><span class="text-emerald-500 font-bold">V100-AI</span></div>
+                    <div class="flex justify-between text-[11px] p-3 border-b border-white/5"><span class="text-zinc-500">DPI Target</span><span class="text-emerald-500 font-bold">8K Ultra</span></div>
                 </div>
             </div>
-            
-            <button onclick="togglePricing(true)" class="w-full py-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/20 text-emerald-500 text-[10px] font-black uppercase tracking-widest hover:bg-emerald-500 hover:text-black">
-                Upgrade Plan
-            </button>
         </aside>
 
-        <section class="flex-1 flex flex-col p-4 md:p-10 bg-[#080808] relative">
-            <div id="chat-messages" class="flex-1 overflow-y-auto space-y-6 custom-scroll pb-20">
-                <div id="empty-state" class="h-full flex flex-col items-center justify-center text-center opacity-40 py-20">
-                    <div class="w-24 h-24 mb-6 bg-zinc-900 rounded-[2.5rem] flex items-center justify-center border-2 border-dashed border-zinc-800">
-                        <i class="fas fa-cloud-upload-alt text-3xl"></i>
+        <!-- Canvas Area -->
+        <section class="flex-1 flex flex-col p-6 md:p-10 bg-[#080808]">
+            <div id="chat-messages" class="flex-1 overflow-y-auto space-y-10 custom-scroll pb-10">
+                <div id="empty-state" class="h-full flex flex-col items-center justify-center text-center opacity-40">
+                    <div class="w-24 h-24 mb-6 bg-zinc-900 rounded-[2.5rem] flex items-center justify-center border border-dashed border-zinc-700 shadow-inner">
+                        <i class="fas fa-mountain-sun text-3xl text-zinc-700"></i>
                     </div>
-                    <h3 class="text-xl font-black mb-2">Neural Workspace</h3>
-                    <p class="text-sm font-medium text-zinc-500">Upload a low-res image to begin 8K reconstruction.</p>
+                    <h3 class="text-xl font-bold tracking-tight">Stage your Assets</h3>
+                    <p class="text-sm text-zinc-500 max-w-xs">Upload your source imagery to initiate neural reconstruction.</p>
                 </div>
             </div>
 
-            <div class="fixed md:relative bottom-4 left-4 right-4 md:bottom-0 md:left-0 md:right-0 max-w-4xl mx-auto w-full z-20">
-                <div id="file-preview" class="hidden mb-4 p-4 glass-panel rounded-3xl animate-premium flex items-center justify-between shadow-2xl">
+            <!-- Input Bar -->
+            <div class="max-w-4xl mx-auto w-full pt-4">
+                <div id="file-preview" class="hidden mb-6 p-4 glass-panel rounded-[2rem] animate-premium flex items-center justify-between shadow-2xl border-emerald-500/20">
                     <div class="flex items-center gap-4">
-                        <img id="preview-img" src="" class="w-14 h-14 rounded-xl object-cover border border-white/10 shadow-lg">
+                        <img id="preview-img" src="" class="w-14 h-14 rounded-xl object-cover border border-white/10">
                         <div>
-                            <p id="target-name" class="text-xs font-black text-white uppercase tracking-wider truncate max-w-[120px] md:max-w-[300px]"></p>
-                            <p class="text-[9px] text-emerald-500 font-black mt-1 uppercase tracking-widest">Staged for 8K</p>
+                            <p id="target-name" class="text-xs font-bold text-white uppercase tracking-wider truncate max-w-[150px] md:max-w-[300px]"></p>
+                            <p class="text-[9px] text-emerald-500 font-bold mt-1 uppercase tracking-widest">Ready for 8K Deep Scan</p>
                         </div>
                     </div>
-                    <button onclick="clearFile()" class="w-10 h-10 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center transition-all"><i class="fas fa-times text-zinc-400"></i></button>
+                    <button onclick="clearFile()" class="w-10 h-10 rounded-full bg-white/5 hover:bg-rose-500/20 hover:text-rose-500 flex items-center justify-center transition-all"><i class="fas fa-times"></i></button>
                 </div>
 
-                <div class="glass-panel p-2 md:p-3 rounded-full border border-white/10 flex items-center gap-2 pr-4 md:pr-6 shadow-2xl">
-                    <label class="w-12 h-12 md:w-16 md:h-16 flex items-center justify-center bg-white text-black rounded-full cursor-pointer hover:scale-95 active:scale-90 transition-all shadow-xl">
-                        <i class="fas fa-plus md:text-xl"></i>
+                <div class="glass-panel p-2 rounded-[2.5rem] border border-white/10 flex items-center gap-2 pr-4 shadow-2xl relative overflow-hidden group">
+                    <label class="w-14 h-14 md:w-16 md:h-16 flex items-center justify-center bg-white text-black rounded-full cursor-pointer hover:scale-95 transition-all z-10 shrink-0 shadow-lg">
+                        <i class="fas fa-plus"></i>
                         <input type="file" id="file-input" class="hidden" accept="image/*" onchange="handleFile(event)">
                     </label>
-                    <input type="text" id="status-text" readonly placeholder="Upload image..." class="flex-1 bg-transparent px-2 md:px-4 outline-none text-xs md:text-sm text-zinc-400 font-bold uppercase tracking-wider">
-                    <button id="process-btn" disabled onclick="startProcessing()" class="px-4 md:px-8 py-3 md:py-4 bg-emerald-500 text-black font-black text-[10px] md:text-xs uppercase tracking-[0.15em] rounded-full disabled:opacity-20 transition-all shadow-lg whitespace-nowrap">
-                        Process <span class="hidden sm:inline">8K</span> <i class="fas fa-bolt ml-1 md:ml-2"></i>
+                    <input type="text" id="status-text" readonly placeholder="Upload source file..." class="flex-1 bg-transparent px-4 outline-none text-xs md:text-sm text-zinc-400 font-medium">
+                    <button id="process-btn" disabled onclick="startProcessing()" class="px-6 md:px-10 py-3.5 md:py-4 bg-emerald-500 text-black font-bold text-[10px] md:text-xs uppercase tracking-[0.2em] rounded-[1.5rem] disabled:opacity-20 transition-all shadow-[0_0_30px_rgba(16,185,129,0.3)] shrink-0">
+                        8K PROCESS <i class="fas fa-bolt ml-2"></i>
                     </button>
                 </div>
             </div>
@@ -331,8 +321,9 @@
 </main>
 
 <script>
-// Logic preserved from source
-let scene, camera, renderer, particles;
+let scene, camera, renderer, particles, currentUser = null;
+
+// Initialize 3D Particles
 function init3D(){
     scene = new THREE.Scene();
     camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 3000);
@@ -345,66 +336,115 @@ function init3D(){
         vertices.push(THREE.MathUtils.randFloatSpread(2500), THREE.MathUtils.randFloatSpread(2500), THREE.MathUtils.randFloatSpread(2500));
     }
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-    particles = new THREE.Points(geometry, new THREE.PointsMaterial({color: 0x10b981, size: 1.0, transparent: true, opacity: 0.4}));
+    particles = new THREE.Points(geometry, new THREE.PointsMaterial({color: 0x10b981, size: 1.2, transparent: true, opacity: 0.5}));
     scene.add(particles);
     camera.position.z = 1000;
     function animate(){
         requestAnimationFrame(animate);
-        particles.rotation.y += 0.0002;
+        particles.rotation.y += 0.0003;
+        particles.rotation.x += 0.0001;
         renderer.render(scene, camera);
     }
     animate();
 }
 
-function toggleMobileSidebar() {
-    const sidebar = document.getElementById('app-sidebar');
-    const overlay = document.getElementById('mobile-sidebar-overlay');
-    sidebar.classList.toggle('active');
-    overlay.classList.toggle('active');
-}
-
-const slider = document.getElementById('how-it-works');
+// Comparison Slider Logic
+const sliderArea = document.getElementById('how-it-works');
 const sliderBox = document.getElementById('slider-box');
 const sliderHandle = document.getElementById('slider-handle');
 
-const handleMove = (clientX) => {
-    const rect = slider.getBoundingClientRect();
-    const x = ((clientX - rect.left) / rect.width) * 100;
-    if (x >= 0 && x <= 100) {
-        sliderBox.style.width = `${x}%`;
-        sliderHandle.style.left = `${x}%`;
+function updateSlider(clientX) {
+    const rect = sliderArea.getBoundingClientRect();
+    let x = ((clientX - rect.left) / rect.width) * 100;
+    x = Math.max(0, Math.min(100, x));
+    sliderBox.style.width = `${x}%`;
+    sliderHandle.style.left = `${x}%`;
+}
+
+sliderArea.addEventListener('mousemove', (e) => updateSlider(e.clientX));
+sliderArea.addEventListener('touchmove', (e) => updateSlider(e.touches[0].clientX));
+
+// Navigation Controls
+function togglePricing(show) { 
+    document.getElementById('pricing-screen').classList.toggle('hidden', !show); 
+}
+function showLogin() { 
+    document.getElementById('login-view').classList.remove('hidden'); 
+    document.getElementById('login-error').classList.add('hidden'); 
+}
+function hideLogin() { 
+    document.getElementById('login-view').classList.add('hidden'); 
+}
+
+// Auth Handlers (Simulation for persistence requirements)
+async function handleLoginAction() {
+    const email = document.getElementById('login-email').value;
+    const pass = document.getElementById('login-password').value;
+    const errorMsg = document.getElementById('login-error');
+
+    if (!email || !pass) {
+        errorMsg.innerText = "Please provide all access credentials";
+        errorMsg.classList.remove('hidden');
+        return;
+    }
+
+    try {
+        // Sign in anonymously as base, then check user data in Firestore
+        const userCredential = await signInAnonymously(window.auth);
+        const user = userCredential.user;
+        
+        // Use document ID based on email (hashed/normalized) to simulate MongoDB-style users
+        const userId = btoa(email.toLowerCase()).replace(/=/g, '');
+        const userRef = doc(window.db, 'artifacts', window.appId, 'users', userId, 'profile', 'data');
+        
+        const userDoc = await getDoc(userRef);
+        
+        if (userDoc.exists()) {
+            const data = userDoc.data();
+            if (data.password === pass) {
+                // Success
+                enterApp(userId);
+            } else {
+                errorMsg.classList.remove('hidden');
+            }
+        } else {
+            // Logic for "Does not exist"
+            errorMsg.innerText = "User account not found in neural database";
+            errorMsg.classList.remove('hidden');
+        }
+    } catch (e) {
+        errorMsg.innerText = "Network transmission error. Try again.";
+        errorMsg.classList.remove('hidden');
     }
 }
 
-slider.onmousemove = (e) => handleMove(e.clientX);
-slider.ontouchmove = (e) => handleMove(e.touches[0].clientX);
-
-let authToken = localStorage.getItem('pro_token'), activeFile = null;
-
-function togglePricing(show) { document.getElementById('pricing-screen').classList.toggle('hidden', !show); }
-function showLogin() { document.getElementById('login-view').classList.remove('hidden'); }
-function hideLogin() { document.getElementById('login-view').classList.add('hidden'); }
-
-async function doLogin() {
-    const email = document.getElementById('login-email').value;
-    const password = document.getElementById('login-password').value;
-    if(!email || !password) return;
-    enterApp(); 
-}
-
-async function enterApp() {
+function enterApp(uid) {
+    currentUser = uid;
     document.getElementById('welcome-screen').classList.add('hidden');
     document.getElementById('login-view').classList.add('hidden');
     document.getElementById('app-view').classList.remove('hidden');
-    refreshProfile();
+    setupRealtimeProfile(uid);
 }
 
-async function refreshProfile() {
-    document.getElementById('usage-val').innerText = "Trial";
-    document.getElementById('usage-text').innerText = "Demo Balance: Active";
-    document.getElementById('usage-bar').style.width = '20%';
+function setupRealtimeProfile(uid) {
+    const userRef = doc(window.db, 'artifacts', window.appId, 'users', uid, 'profile', 'data');
+    
+    onSnapshot(userRef, (snapshot) => {
+        if (snapshot.exists()) {
+            const data = snapshot.data();
+            const used = data.images_used || 0;
+            const limit = data.image_limit || 10;
+            const remaining = limit - used;
+
+            document.getElementById('usage-val').innerText = remaining;
+            document.getElementById('usage-val-mobile').innerText = remaining;
+            document.getElementById('usage-text').innerText = `${used} / ${limit} Neural Tokens used`;
+            document.getElementById('usage-bar').style.width = `${(used / limit) * 100}%`;
+        }
+    }, (error) => console.error("Quota error:", error));
 }
 
+let activeFile = null;
 function handleFile(e) {
     activeFile = e.target.files[0];
     if(activeFile) {
@@ -426,74 +466,107 @@ function clearFile() {
 }
 
 async function startProcessing() {
-    if(!activeFile) return;
+    if(!activeFile || !currentUser) return;
+    
+    // Check quota first
+    const userRef = doc(window.db, 'artifacts', window.appId, 'users', currentUser, 'profile', 'data');
+    const userSnap = await getDoc(userRef);
+    if(userSnap.exists()) {
+        const d = userSnap.data();
+        if(d.images_used >= d.image_limit) {
+            alert("Neural token quota exceeded. Please upgrade via WhatsApp.");
+            return;
+        }
+    }
+
     const container = document.getElementById('chat-messages');
     const bubbleId = 'proc-' + Date.now();
     const wrap = document.createElement('div');
-    wrap.className = 'animate-premium max-w-4xl mx-auto w-full';
+    wrap.className = 'animate-premium max-w-4xl mx-auto w-full px-2';
     wrap.innerHTML = `
-        <div class="glass-panel rounded-[32px] md:rounded-[40px] overflow-hidden p-6 md:p-8 border-white/10 bg-zinc-950/60 shadow-2xl">
-            <div class="flex justify-between items-center mb-6">
+        <div class="glass-panel rounded-[40px] overflow-hidden p-6 md:p-10 border-white/10 bg-zinc-950/40 shadow-2xl">
+            <div class="flex justify-between items-center mb-8">
                 <div class="flex items-center gap-3">
-                    <span class="text-[9px] font-black uppercase tracking-widest text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded">Task Active</span>
+                    <span class="w-2 h-2 bg-emerald-500 rounded-full animate-pulse shadow-[0_0_8px_#10b981]"></span>
+                    <span class="text-[10px] font-bold uppercase tracking-[0.2em] text-emerald-500">Processing Task</span>
                 </div>
-                <span id="perc-${bubbleId}" class="text-[10px] font-black text-white">0%</span>
+                <span id="perc-${bubbleId}" class="text-xs font-bold text-white font-mono">0%</span>
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 mb-8">
-                <div class="aspect-square bg-zinc-900 rounded-3xl overflow-hidden border border-white/5 relative">
-                    <img src="${URL.createObjectURL(activeFile)}" class="w-full h-full object-cover grayscale opacity-30">
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                <div class="space-y-4">
+                    <p class="text-[9px] font-bold text-zinc-500 uppercase tracking-widest text-center">Source Matrix</p>
+                    <div class="aspect-square bg-zinc-900 rounded-[2.5rem] overflow-hidden border border-white/5 shadow-inner">
+                        <img src="${URL.createObjectURL(activeFile)}" class="w-full h-full object-cover">
+                    </div>
                 </div>
-                <div class="aspect-square bg-zinc-900 rounded-3xl overflow-hidden border border-white/5 relative">
-                    <img id="result-${bubbleId}" src="" class="w-full h-full object-cover opacity-0 transition-opacity duration-1000">
-                    <div id="loader-${bubbleId}" class="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-md">
-                        <div class="w-10 h-10 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                <div class="space-y-4">
+                    <p class="text-[9px] font-bold text-zinc-500 uppercase tracking-widest text-center">Neural Reconstruction</p>
+                    <div class="aspect-square bg-zinc-900 rounded-[2.5rem] overflow-hidden border border-white/5 relative shadow-inner">
+                        <img id="result-${bubbleId}" src="" class="w-full h-full object-cover opacity-0 transition-opacity duration-1000">
+                        <div id="loader-${bubbleId}" class="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-md">
+                            <div class="w-14 h-14 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                            <p class="text-[8px] font-bold uppercase tracking-[0.4em] text-emerald-500 mt-6 animate-pulse">Scanning Pixels</p>
+                        </div>
                     </div>
                 </div>
             </div>
+
             <div class="h-1.5 w-full bg-zinc-900 rounded-full overflow-hidden mb-6">
-                <div id="bar-${bubbleId}" class="h-full bg-emerald-500 w-0 transition-all duration-[4000ms]"></div>
+                <div id="bar-${bubbleId}" class="h-full bg-emerald-500 w-0 transition-all duration-[5000ms] shadow-[0_0_15px_rgba(16,185,129,0.4)]"></div>
             </div>
-            <div id="actions-${bubbleId}" class="hidden flex flex-col sm:flex-row justify-between items-center pt-6 border-t border-white/5 animate-premium gap-4">
-                <p class="text-[10px] font-black text-emerald-500 uppercase tracking-widest">Reconstruction Success.</p>
-                <div class="flex gap-4 w-full sm:w-auto">
-                    <button onclick="this.closest('.animate-premium').remove()" class="flex-1 sm:flex-none text-[9px] font-black uppercase tracking-widest text-zinc-500">Dismiss</button>
-                    <a id="dl-${bubbleId}" href="#" download class="flex-1 sm:flex-none px-6 py-3 rounded-xl bg-white text-black text-[9px] font-black uppercase tracking-widest text-center">Download 8K</a>
+            
+            <div id="actions-${bubbleId}" class="hidden flex flex-col md:flex-row justify-between items-center gap-4 pt-8 border-t border-white/5 animate-premium">
+                <p class="text-[10px] font-bold text-zinc-500 uppercase tracking-[0.2em]">Asset generated successfully.</p>
+                <div class="flex gap-4 w-full md:w-auto">
+                    <button onclick="this.closest('.animate-premium').remove()" class="flex-1 md:flex-none text-[10px] font-bold uppercase tracking-widest text-zinc-600 hover:text-white transition-colors">Dismiss</button>
+                    <a id="dl-${bubbleId}" href="#" download class="flex-1 md:flex-none px-10 py-4 rounded-xl bg-white text-black text-[10px] font-bold uppercase tracking-widest hover:scale-105 transition-all text-center">Save 8K Master</a>
                 </div>
             </div>
         </div>
     `;
     container.prepend(wrap);
-    container.scrollTo({ top: 0, behavior: 'smooth' });
     
+    // Simulate Processing Logic
     setTimeout(() => {
         document.getElementById(`bar-${bubbleId}`).style.width = '100%';
         let p = 0;
         const interval = setInterval(() => {
             p += 1;
-            const percEl = document.getElementById(`perc-${bubbleId}`);
-            if(percEl) percEl.innerText = p + '%';
+            document.getElementById(`perc-${bubbleId}`).innerText = p + '%';
             if(p >= 100) clearInterval(interval);
-        }, 35);
-        
-        setTimeout(() => {
-            const resImg = document.getElementById(`result-${bubbleId}`);
-            if(resImg) {
-                resImg.src = URL.createObjectURL(activeFile);
-                resImg.classList.replace('opacity-0', 'opacity-100');
-            }
-            const loader = document.getElementById(`loader-${bubbleId}`);
-            if(loader) loader.remove();
-            document.getElementById(`actions-${bubbleId}`).classList.remove('hidden');
-            document.getElementById(`dl-${bubbleId}`).href = URL.createObjectURL(activeFile);
-            clearFile();
-        }, 4200);
+        }, 45);
     }, 100);
+
+    // Mock Backend Call & Firestore Update
+    setTimeout(async () => {
+        const resultImg = document.getElementById(`result-${bubbleId}`);
+        resultImg.src = URL.createObjectURL(activeFile); // In reality this would be the upscaled URL
+        resultImg.classList.replace('opacity-0', 'opacity-100');
+        document.getElementById(`loader-${bubbleId}`).remove();
+        document.getElementById(`actions-${bubbleId}`).classList.remove('hidden');
+        document.getElementById(`dl-${bubbleId}`).href = resultImg.src;
+        
+        // Update quota in Firestore
+        await updateDoc(userRef, {
+            images_used: increment(1)
+        });
+
+        clearFile();
+    }, 5000);
 }
 
-function logout() { localStorage.removeItem('pro_token'); window.location.reload(); }
-window.onload = () => { init3D(); if(authToken) enterApp(); };
+function logout() { 
+    window.auth.signOut();
+    window.location.reload(); 
+}
+
+window.onload = () => { 
+    init3D(); 
+};
+
 window.addEventListener('resize', () => {
-    if(renderer && camera) {
+    if(camera && renderer) {
         camera.aspect = window.innerWidth / window.innerHeight;
         camera.updateProjectionMatrix();
         renderer.setSize(window.innerWidth, window.innerHeight);
