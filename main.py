@@ -17,9 +17,10 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.security import OAuth2PasswordBearer
 
 from jose import jwt, JWTError
-from pymongo import MongoClient
-from dotenv import load_dotenv
 from passlib.context import CryptContext
+from dotenv import load_dotenv
+import certifi
+from pymongo import MongoClient
 
 # =========================================================
 # LOAD ENV + LOGGING
@@ -31,7 +32,7 @@ logger = logging.getLogger("ImageAI_Pro")
 # =========================================================
 # CONFIG
 # =========================================================
-MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017")
+MONGO_URI = os.getenv("MONGO_URI")  # MongoDB Atlas URI (mongodb+srv://...)
 JWT_SECRET = os.getenv("JWT_SECRET_KEY", "super-secret-key")
 CLIPDROP_API_KEY = os.getenv("CLIPDROP_API_KEY", "")
 ALGORITHM = "HS256"
@@ -39,9 +40,7 @@ ALGORITHM = "HS256"
 # =========================================================
 # PASSWORD HASHING
 # =========================================================
-# -------------------- PASSWORD HASHING --------------------
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-
 MAX_BCRYPT_LEN = 72
 
 def hash_password(password: str) -> str:
@@ -56,22 +55,25 @@ def verify_password(password: str, hashed: str) -> bool:
 # DATABASE
 # =========================================================
 try:
-    client = MongoClient(MONGO_URI, serverSelectionTimeoutMS=5000)
+    client = MongoClient(
+        MONGO_URI,
+        tls=True,                 # force TLS/SSL
+        tlsCAFile=certifi.where(),# proper CA bundle
+        serverSelectionTimeoutMS=10000  # 10 seconds timeout
+    )
     db = client["image_ai"]
     users_col = db["users"]
-    logger.info("MongoDB connected")
+    # Test connection immediately
+    client.admin.command('ping')
+    logger.info("MongoDB connected successfully")
 except Exception as e:
-    logger.error(f"MongoDB error: {e}")
+    logger.error(f"MongoDB connection failed: {e}")
     raise e
 
 # =========================================================
 # FASTAPI APP
 # =========================================================
-app = FastAPI(title="ImageAI Pro API"
-              # docs_url= None,
-              # redoc_url=None,
-              # openapi_url=None)
-             )
+app = FastAPI(title="ImageAI Pro API")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
@@ -309,4 +311,3 @@ def renew_user(
 
     users_col.update_one({"email": email}, {"$set": update})
     return {"message": "User renewed successfully"}
-
