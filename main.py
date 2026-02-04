@@ -76,7 +76,7 @@ except Exception as e:
 app = FastAPI(title="ImageAI Pro API",
               docs_url= None,
               redoc_url=None,
-              openapi_url=None)
+              openapi_url=None
              )
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
