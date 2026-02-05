@@ -116,7 +116,7 @@
     <nav class="w-full max-w-7xl px-6 md:px-8 h-20 md:h-24 flex items-center justify-between z-10">
         <div class="flex items-center gap-2">
             <div class="w-7 h-7 bg-emerald-500 rounded-lg"></div>
-            <span class="text-lg md:text-xl font-bold tracking-tighter">IMGGEN</span>
+            <span class="text-lg md:text-xl font-bold tracking-tighter">PIXUP8K</span>
         </div>
         <div class="flex gap-3 md:gap-4">
             <button onclick="showLogin()" class="text-xs md:text-sm font-medium hover:text-emerald-400">Sign In</button>
@@ -168,34 +168,32 @@
             <!-- Lite -->
             <div class="glass-panel p-8 md:p-10 rounded-[32px] border border-white/5 hover:border-emerald-500/30 transition-all">
                 <h4 class="text-zinc-500 text-xs font-bold uppercase tracking-widest mb-4">Solo</h4>
-                <div class="text-4xl md:text-5xl font-bold mb-6 md:mb-8">$0</div>
+                <div class="text-4xl md:text-5xl font-bold mb-6 md:mb-8">850</div>
                 <ul class="text-xs md:text-sm text-zinc-400 space-y-4 mb-8 md:mb-10">
-                    <li class="flex items-center gap-3"><i class="fas fa-check text-emerald-500"></i> 5 Upscales / Mo</li>
-                    <li class="flex items-center gap-3"><i class="fas fa-check text-emerald-500"></i> 2K Upscaling</li>
-                    <li class="flex items-center gap-3 opacity-30"><i class="fas fa-times"></i> Commercial Rights</li>
+                    <li class="flex items-center gap-3"><i class="fas fa-check text-emerald-500"></i> 20 Upscales / Mo</li>
+                    <li class="flex items-center gap-3"><i class="fas fa-check text-emerald-500"></i> 8K Upscaling</li>
                 </ul>
-                <button onclick="togglePricing(false); showLogin();" class="w-full py-4 rounded-xl border border-white/10 text-[10px] md:text-xs font-bold hover:bg-white hover:text-black">SELECT</button>
+                <button onclick="openWhatsApp('Solo')" class="w-full py-4 rounded-xl border border-white/10 text-[10px] md:text-xs font-bold hover:bg-white hover:text-black uppercase">GET STARTED</button>
             </div>
             <!-- Pro -->
             <div class="glass-panel p-8 md:p-10 rounded-[32px] border-2 border-emerald-500/50 bg-emerald-500/[0.02]">
                 <h4 class="text-emerald-500 text-xs font-bold uppercase tracking-widest mb-4">Master</h4>
-                <div class="text-4xl md:text-5xl font-bold mb-6 md:mb-8">$49</div>
+                <div class="text-4xl md:text-5xl font-bold mb-6 md:mb-8">1200</div>
                 <ul class="text-xs md:text-sm text-zinc-200 space-y-4 mb-8 md:mb-10">
-                    <li class="flex items-center gap-3"><i class="fas fa-check text-emerald-500"></i> 500 High-Res Tokens</li>
-                    <li class="flex items-center gap-3"><i class="fas fa-check text-emerald-500"></i> 8K Deep Reconstruction</li>
-                    <li class="flex items-center gap-3"><i class="fas fa-check text-emerald-500"></i> Priority GPU Lane</li>
+                    <li class="flex items-center gap-3"><i class="fas fa-check text-emerald-500"></i> 35 Upscales</li>
+                    <li class="flex items-center gap-3"><i class="fas fa-check text-emerald-500"></i> 8K Upscaling</li>
                 </ul>
-                <button onclick="togglePricing(false); showLogin();" class="btn-premium w-full bg-emerald-500 text-black py-4">GO PRO</button>
+                <button onclick="openWhatsApp('Master')" class="btn-premium w-full bg-emerald-500 text-black py-4 uppercase">GO PRO</button>
             </div>
             <!-- Enterprise -->
             <div class="glass-panel p-8 md:p-10 rounded-[32px] border border-white/5">
                 <h4 class="text-zinc-500 text-xs font-bold uppercase tracking-widest mb-4">Studio</h4>
-                <div class="text-4xl md:text-5xl font-bold mb-6 md:mb-8">$199</div>
+                <div class="text-4xl md:text-5xl font-bold mb-6 md:mb-8">1650</div>
                 <ul class="text-xs md:text-sm text-zinc-400 space-y-4 mb-8 md:mb-10">
-                    <li class="flex items-center gap-3"><i class="fas fa-check text-emerald-500"></i> Unlimited Neural Calls</li>
-                    <li class="flex items-center gap-3"><i class="fas fa-check text-emerald-500"></i> Dedicated Support</li>
+                    <li class="flex items-center gap-3"><i class="fas fa-check text-emerald-500"></i> 50 Upscales</li>
+                    <li class="flex items-center gap-3"><i class="fas fa-check text-emerald-500"></i> 8k Upscaling</li>
                 </ul>
-                <button onclick="togglePricing(false); showLogin();" class="w-full py-4 rounded-xl border border-white/10 text-[10px] md:text-xs font-bold hover:bg-white hover:text-black">CONTACT</button>
+                <button onclick="openWhatsApp('Studio')" class="w-full py-4 rounded-xl border border-white/10 text-[10px] md:text-xs font-bold hover:bg-white hover:text-black uppercase">CONTACT</button>
             </div>
         </div>
         <button onclick="togglePricing(false)" class="mt-10 md:mt-12 block mx-auto text-zinc-500 hover:text-white font-bold text-[10px] md:text-xs uppercase tracking-widest">Back to Gallery</button>
@@ -225,7 +223,7 @@
         <div class="flex items-center gap-4 md:gap-6">
             <div class="flex items-center gap-2">
                 <div class="w-6 h-6 bg-emerald-500 rounded-md"></div>
-                <h2 class="font-bold tracking-tighter text-base md:text-lg uppercase">IMGGEN</h2>
+                <h2 class="font-bold tracking-tighter text-base md:text-lg uppercase">PIXUP8K</h2>
             </div>
             <nav class="hidden md:flex gap-6 text-[10px] font-bold uppercase tracking-widest text-zinc-500">
                 <a href="#" class="text-white border-b border-emerald-500 pb-1">Processing</a>
@@ -243,7 +241,6 @@
     </header>
 
     <div class="flex-1 flex flex-col md:flex-row overflow-hidden">
-        <!-- Dashboard Sidebar (Hidden on small mobile, scrollable on tablet) -->
         <aside class="w-full md:w-80 border-b md:border-b-0 md:border-r border-white/5 p-6 md:p-10 space-y-6 md:space-y-12 bg-zinc-950/30 overflow-y-auto shrink-0">
             <div class="space-y-4">
                 <p class="text-[10px] uppercase tracking-widest text-zinc-500 font-bold">Usage Balance</p>
@@ -267,7 +264,6 @@
             </div>
         </aside>
 
-        <!-- Canvas Area -->
         <section class="flex-1 flex flex-col p-4 md:p-10 bg-[#080808] overflow-hidden">
             <div id="chat-messages" class="flex-1 overflow-y-auto space-y-6 md:space-y-8 custom-scroll pb-6">
                 <div id="empty-state" class="h-full flex flex-col items-center justify-center text-center opacity-30">
@@ -279,7 +275,6 @@
                 </div>
             </div>
 
-            <!-- Enhanced Input Bar -->
             <div class="max-w-4xl mx-auto w-full pt-4 md:pt-6 shrink-0">
                 <div id="file-preview" class="hidden mb-4 p-3 md:p-4 glass-panel rounded-[1.5rem] md:rounded-[2rem] animate-premium flex items-center justify-between">
                     <div class="flex items-center gap-3 md:gap-4 overflow-hidden">
@@ -308,7 +303,7 @@
 </main>
 
 <script>
-// ---------------- Logic & Lines (Maintained exactly as requested) ----------------
+// ---------------- Logic & Lines ----------------
 let scene, camera, renderer, particles;
 function init3D(){
     scene = new THREE.Scene();
@@ -339,6 +334,7 @@ const sliderBox = document.getElementById('slider-box');
 const sliderHandle = document.getElementById('slider-handle');
 
 function updateSlider(clientX) {
+    if (!slider) return;
     const rect = slider.getBoundingClientRect();
     const x = ((clientX - rect.left) / rect.width) * 100;
     if (x >= 0 && x <= 100) {
@@ -355,6 +351,14 @@ let authToken = localStorage.getItem('pro_token'), activeFile = null;
 function togglePricing(show) { document.getElementById('pricing-screen').classList.toggle('hidden', !show); }
 function showLogin() { document.getElementById('login-view').classList.remove('hidden'); document.getElementById('login-error').classList.add('hidden'); }
 function hideLogin() { document.getElementById('login-view').classList.add('hidden'); }
+
+// Added WhatsApp Integration Logic
+function openWhatsApp(planName) {
+    const phoneNumber = "923260341402";
+    const message = `Hello Pixup8k Team! I am interested in the ${planName} Plan. Please provide more details on how to upgrade.`;
+    const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
+    window.open(url, '_blank');
+}
 
 async function doLogin() {
     const email = document.getElementById('login-email').value;
@@ -432,7 +436,7 @@ async function startProcessing() {
     const container = document.getElementById('chat-messages');
     const bubbleId = 'proc-' + Date.now();
     const wrap = document.createElement('div');
-    wrap.className = 'animate-premium max-w-4xl mx-auto w-full px-2 md:px-0';
+    wrap.className = 'animate-premium max-w-4xl mx-auto w-full px-2 md:px-0 mb-8';
     wrap.innerHTML = `
         <div class="glass-panel rounded-[30px] md:rounded-[40px] overflow-hidden p-6 md:p-8 border-white/10 bg-zinc-950/40">
             <div class="flex justify-between items-center mb-6">
@@ -443,7 +447,7 @@ async function startProcessing() {
                 <span id="perc-${bubbleId}" class="text-[10px] md:text-xs font-bold text-white">0%</span>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:grid-cols-2 md:gap-8 mb-8">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 md:gap-8 mb-8">
                 <div class="space-y-3 md:space-y-4">
                     <p class="text-[8px] md:text-[9px] font-bold text-zinc-500 uppercase tracking-widest">Original</p>
                     <div class="aspect-square bg-zinc-900 rounded-[1.5rem] md:rounded-[2rem] overflow-hidden border border-white/5">
@@ -477,11 +481,13 @@ async function startProcessing() {
     container.prepend(wrap);
     
     setTimeout(() => {
-        document.getElementById(`bar-${bubbleId}`).style.width = '100%';
+        const bar = document.getElementById(`bar-${bubbleId}`);
+        if(bar) bar.style.width = '100%';
         let p = 0;
         const interval = setInterval(() => {
             p += 1;
-            document.getElementById(`perc-${bubbleId}`).innerText = p + '%';
+            const perc = document.getElementById(`perc-${bubbleId}`);
+            if(perc) perc.innerText = p + '%';
             if(p >= 100) clearInterval(interval);
         }, 35);
     }, 100);
@@ -499,11 +505,16 @@ async function startProcessing() {
         if(res.ok) {
             setTimeout(() => {
                 const resultImg = document.getElementById(`result-${bubbleId}`);
-                resultImg.src = data.download_url;
-                resultImg.classList.replace('opacity-0', 'opacity-100');
-                document.getElementById(`loader-${bubbleId}`).remove();
-                document.getElementById(`actions-${bubbleId}`).classList.remove('hidden');
-                document.getElementById(`dl-${bubbleId}`).href = data.download_url;
+                if(resultImg) {
+                    resultImg.src = data.download_url;
+                    resultImg.classList.replace('opacity-0', 'opacity-100');
+                }
+                const loader = document.getElementById(`loader-${bubbleId}`);
+                if(loader) loader.remove();
+                const actions = document.getElementById(`actions-${bubbleId}`);
+                if(actions) actions.classList.remove('hidden');
+                const dl = document.getElementById(`dl-${bubbleId}`);
+                if(dl) dl.href = data.download_url;
                 refreshProfile();
                 clearFile();
             }, 4200);
@@ -511,8 +522,10 @@ async function startProcessing() {
     } catch {
         setTimeout(() => {
             const resultImg = document.getElementById(`result-${bubbleId}`);
-            resultImg.src = URL.createObjectURL(activeFile);
-            resultImg.classList.replace('opacity-0', 'opacity-100');
+            if(resultImg) {
+                resultImg.src = URL.createObjectURL(activeFile);
+                resultImg.classList.replace('opacity-0', 'opacity-100');
+            }
             const loader = document.getElementById(`loader-${bubbleId}`);
             if(loader) loader.remove();
             const actions = document.getElementById(`actions-${bubbleId}`);
