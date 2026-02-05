@@ -73,10 +73,11 @@ except Exception as e:
 # =========================================================
 # FASTAPI APP
 # =========================================================
-app = FastAPI(
-    title="ImageAI Pro API"
-    
-)
+app = FastAPI(title="ImageAI Pro API",
+              docs_url= None,
+              redoc_url=None,
+              openapi_url=None
+             )
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
