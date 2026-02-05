@@ -75,9 +75,7 @@ except Exception as e:
 # =========================================================
 app = FastAPI(
     title="ImageAI Pro API"
-    # docs_url=None,
-    # redoc_url=None,
-    # openapi_url=None
+    
 )
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -274,14 +272,14 @@ def seed_users():
             "expires_at": datetime.utcnow() + timedelta(days=34)
         },
 
-        "email": "user1@gmail.com",
+      {  "email": "user1@gmail.com",
             "password_hash": hash_password("@123userh90234"),
             "password_set_at": datetime.utcnow(),
             "password_expires_at": datetime.utcnow() + timedelta(days=1),
             "image_limit": 2,
             "images_used": 0,
             "active": True,
-            "expires_at": datetime.utcnow() + timedelta(days=1)
+            "expires_at": datetime.utcnow() + timedelta(days=1)}
     ]
 
     added = 0
