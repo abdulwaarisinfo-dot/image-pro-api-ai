@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>ImgGen | Professional Neural Upscaling</title>
+    <title>PIXUP8K | Professional Neural Upscaling & Text-to-Image</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
@@ -127,14 +127,18 @@
     <!-- Hero Section -->
     <div class="max-w-5xl w-full px-6 md:px-8 py-8 md:py-12 text-center z-10">
         <div class="animate-premium opacity-0">
+            <!-- Updated Headlines for both features -->
             <h1 class="text-4xl md:text-7xl font-bold tracking-tight mb-6 leading-tight">
-                Cinematic <span class="text-emerald-500">8K Quality</span><br>from any resolution.
+                Cinematic <span class="text-emerald-500">8K Quality</span><br>
+                & <span class="text-emerald-500">Text to Image</span>
             </h1>
             <p class="text-zinc-400 text-base md:text-xl max-w-2xl mx-auto mb-8 md:mb-10 leading-relaxed">
-                The world's most advanced neural reconstruction engine. Elevate your photography, digital art, and textures to 8K masterworks instantly.
+                The world's most advanced neural reconstruction engine. 
+                <br class="hidden md:block">
+                <span class="text-white font-medium">Upscale existing assets</span> or <span class="text-white font-medium">Generate from imagination</span> instantly.
             </p>
             
-            <!-- Before/After Simulation -->
+            <!-- Comparison Slider -->
             <div class="mb-10 relative group cursor-pointer" id="how-it-works">
                 <div class="comparison-slider mx-auto">
                     <img src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1200&auto=format&fit=crop" class="comparison-img blur-sm opacity-60">
@@ -147,6 +151,24 @@
                     <div class="absolute bottom-4 right-4 z-10 text-[8px] md:text-[10px] font-bold tracking-widest uppercase bg-emerald-500 text-black px-2 py-1 rounded shadow-lg">Neural 8K</div>
                 </div>
                 <p class="mt-4 text-[10px] md:text-xs text-zinc-500 font-medium italic">Hover or drag to witness the reconstruction</p>
+            </div>
+
+            <!-- Features Grid (Text to Image Headline Addition) -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10 max-w-3xl mx-auto">
+                <div class="p-6 glass-panel rounded-2xl border-white/5 text-left">
+                    <div class="w-8 h-8 bg-emerald-500/10 rounded flex items-center justify-center mb-3">
+                        <i class="fas fa-expand text-emerald-500"></i>
+                    </div>
+                    <h3 class="font-bold text-white mb-1">Ultra-HD Upscaling</h3>
+                    <p class="text-zinc-500 text-xs">Transform low-res images into 8K masterworks with zero artifacting.</p>
+                </div>
+                <div class="p-6 glass-panel rounded-2xl border-white/5 text-left">
+                    <div class="w-8 h-8 bg-emerald-500/10 rounded flex items-center justify-center mb-3">
+                        <i class="fas fa-magic text-emerald-500"></i>
+                    </div>
+                    <h3 class="font-bold text-white mb-1">Text to Image Gen</h3>
+                    <p class="text-zinc-500 text-xs">Describe your vision and let our neural engine create high-fidelity art from text.</p>
+                </div>
             </div>
 
             <div class="flex flex-col sm:flex-row gap-4 justify-center">
@@ -225,8 +247,12 @@
                 <div class="w-6 h-6 bg-emerald-500 rounded-md"></div>
                 <h2 class="font-bold tracking-tighter text-base md:text-lg uppercase">PIXUP8K</h2>
             </div>
-            <nav class="hidden md:flex gap-6 text-[10px] font-bold uppercase tracking-widest text-zinc-500">
+            <nav class="hidden md:flex items-center gap-6 text-[10px] font-bold uppercase tracking-widest text-zinc-500">
                 <a href="#" class="text-white border-b border-emerald-500 pb-1">Processing</a>
+                <button onclick="window.location.href='/app'" class="hover:text-emerald-400 transition-colors flex items-center gap-2">
+                    <i class="fas fa-magic text-[10px]"></i>
+                    Text to Image
+                </button>
             </nav>
         </div>
         <div class="flex items-center gap-3 md:gap-4">
@@ -261,6 +287,10 @@
                 <div class="space-y-2">
                     <div class="flex justify-between text-[11px] p-3 border-b border-white/5"><span class="text-zinc-500">Upscaler</span><span class="text-emerald-500 font-bold">Neural 8K</span></div>
                 </div>
+                <button onclick="window.location.href='/app'" class="w-full mt-4 p-4 border border-white/5 rounded-2xl flex items-center justify-between text-[10px] font-bold uppercase tracking-widest hover:bg-emerald-500 hover:text-black transition-all">
+                    <span>Text to Image</span>
+                    <i class="fas fa-arrow-right"></i>
+                </button>
             </div>
         </aside>
 
@@ -303,7 +333,7 @@
 </main>
 
 <script>
-// ---------------- Logic & Lines ----------------
+// ---------------- Logic & Lines (Original) ----------------
 let scene, camera, renderer, particles;
 function init3D(){
     scene = new THREE.Scene();
@@ -352,7 +382,6 @@ function togglePricing(show) { document.getElementById('pricing-screen').classLi
 function showLogin() { document.getElementById('login-view').classList.remove('hidden'); document.getElementById('login-error').classList.add('hidden'); }
 function hideLogin() { document.getElementById('login-view').classList.add('hidden'); }
 
-// Added WhatsApp Integration Logic
 function openWhatsApp(planName) {
     const phoneNumber = "923260341402";
     const message = `Hello Pixup8k Team! I am interested in the ${planName} Plan. Please provide more details on how to upgrade.`;
@@ -387,6 +416,7 @@ async function doLogin() {
             errorMsg.classList.remove('hidden');
         }
     } catch(err) {
+        // Fallback for demo environments if backend not reachable
         enterApp(); 
     }
 }
@@ -520,6 +550,7 @@ async function startProcessing() {
             }, 4200);
         }
     } catch {
+        // Fallback simulation
         setTimeout(() => {
             const resultImg = document.getElementById(`result-${bubbleId}`);
             if(resultImg) {
