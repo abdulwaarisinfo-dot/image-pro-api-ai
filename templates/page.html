@@ -2,7 +2,7 @@
 <html lang="en" class="dark">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>PIXUP8K | Neural Chat Synthesis</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
@@ -23,16 +23,16 @@
             font-family: 'Inter', sans-serif;
             background-color: var(--bg-deep);
             color: #ececec;
-            height: 100vh;
+            height: 100dvh; /* Use dynamic viewport height for mobile browsers */
             overflow: hidden;
-            margin: 0;
+            -webkit-tap-highlight-color: transparent;
         }
 
         .chat-container {
             scrollbar-width: thin;
             scrollbar-color: #333 transparent;
         }
-        .chat-container::-webkit-scrollbar { width: 6px; }
+        .chat-container::-webkit-scrollbar { width: 4px; }
         .chat-container::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
 
         #canvas-container {
@@ -45,6 +45,7 @@
         .glass-panel {
             background: var(--panel);
             border: 1px solid var(--border);
+            backdrop-filter: blur(10px);
         }
 
         .message-bubble {
@@ -52,7 +53,7 @@
         }
 
         @keyframes slideUp {
-            from { opacity: 0; transform: translateY(20px); }
+            from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
 
@@ -65,15 +66,17 @@
         }
 
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
         .hidden-section { display: none !important; }
 
         input:focus { box-shadow: 0 0 20px var(--accent-glow); }
-        
-        /* Ensure the input area stays above system keyboards on mobile */
-        .sticky-input {
-            backdrop-filter: blur(10px);
-            -webkit-backdrop-filter: blur(10px);
+
+        /* Custom Mobile Sidebar Overlay */
+        #mobile-sidebar {
+            transition: transform 0.3s ease-in-out;
+            z-index: 100;
         }
+        #mobile-sidebar.closed { transform: translateX(-100%); }
     </style>
 </head>
 <body class="flex flex-col">
@@ -82,12 +85,12 @@
 
 <!-- Login Overlay -->
 <div id="login-screen" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-md px-4">
-    <div class="glass-panel p-6 md:p-8 rounded-3xl w-full max-w-md shadow-2xl border-white/5">
+    <div class="glass-panel p-6 sm:p-8 rounded-3xl w-full max-w-md shadow-2xl border-white/5">
         <div class="flex flex-col items-center mb-8">
-            <div class="w-10 h-10 bg-emerald-500 rounded-lg mb-4 flex items-center justify-center">
-                <i class="fas fa-brain text-black text-sm"></i>
+            <div class="w-12 h-12 bg-emerald-500 rounded-2xl mb-4 flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.3)]">
+                <i class="fas fa-brain text-black text-lg"></i>
             </div>
-            <h2 class="text-xl md:text-2xl font-bold tracking-tight uppercase">Neural <span class="text-emerald-500">Link</span></h2>
+            <h2 class="text-2xl font-bold tracking-tight uppercase">Neural <span class="text-emerald-500">Link</span></h2>
             <p class="text-zinc-500 text-[10px] mt-2 font-bold uppercase tracking-[0.2em]">Authorized Personnel Only</p>
         </div>
         <form id="login-form" class="space-y-4">
@@ -99,7 +102,7 @@
                 <input type="password" name="password" required placeholder="Access Key" 
                     class="w-full bg-zinc-900 border border-white/5 rounded-xl px-5 py-3.5 text-sm outline-none focus:border-emerald-500/50 transition-all">
             </div>
-            <button type="submit" class="w-full py-3.5 bg-emerald-500 text-black font-bold text-xs uppercase tracking-widest rounded-xl hover:bg-emerald-400 transition-all mt-2">
+            <button type="submit" class="w-full py-3.5 bg-emerald-500 text-black font-bold text-xs uppercase tracking-widest rounded-xl hover:bg-emerald-400 active:scale-95 transition-all mt-2">
                 Establish Connection
             </button>
         </form>
@@ -108,7 +111,7 @@
 
 <main id="app-interface" class="relative z-10 flex h-screen w-full overflow-hidden hidden-section">
     
-    <!-- Sidebar (Desktop Only) -->
+    <!-- Sidebar (Desktop) -->
     <aside class="hidden lg:flex w-72 border-r border-white/5 flex-col bg-[#0d0d0d] shrink-0">
         <div class="p-6 border-b border-white/5 flex items-center gap-3">
             <div class="w-5 h-5 bg-emerald-500 rounded flex items-center justify-center">
@@ -164,66 +167,85 @@
         </div>
     </aside>
 
-    <!-- Main Section (Responsive) -->
-    <section class="flex-1 flex flex-col relative bg-[#0a0a0a] min-w-0">
-        <!-- Top Bar (Mobile/Tablet Header) -->
-        <div class="lg:hidden h-14 border-b border-white/5 flex items-center justify-between px-4 bg-black/50 backdrop-blur-md shrink-0">
-            <div class="flex items-center gap-2">
-                <div class="w-4 h-4 bg-emerald-500 rounded flex items-center justify-center">
-                    <i class="fas fa-bolt text-[8px] text-black"></i>
-                </div>
-                <h2 class="font-bold text-xs uppercase tracking-widest">PIXUP8K</h2>
+    <!-- Mobile Sidebar Drawer -->
+    <div id="mobile-sidebar" class="lg:hidden fixed inset-0 bg-black/80 backdrop-blur-sm closed">
+        <div class="w-72 h-full bg-[#0d0d0d] border-r border-white/10 flex flex-col">
+            <div class="p-4 border-b border-white/5 flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-widest">System Overview</span>
+                <button onclick="toggleMobileMenu()" class="text-zinc-500 p-2"><i class="fas fa-times"></i></button>
             </div>
+            <div id="mobile-sidebar-content" class="p-6 flex-1 overflow-y-auto">
+                <!-- Content cloned via JS -->
+            </div>
+            <div class="p-6 border-t border-white/5">
+                <button onclick="logout()" class="w-full py-3 text-[10px] font-bold uppercase tracking-widest text-red-500/80 bg-red-500/5 rounded-xl">Terminate Session</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Chat Display Area -->
+    <section class="flex-1 flex flex-col relative bg-[#0a0a0a]">
+        <!-- Top Bar (Mobile/Tablet Status) -->
+        <div class="h-14 border-b border-white/5 flex items-center justify-between px-4 lg:px-8 bg-black/50 backdrop-blur-md shrink-0">
             <div class="flex items-center gap-4">
-                 <button onclick="logout()" class="text-zinc-500 hover:text-white text-xs">
-                    <i class="fas fa-power-off"></i>
+                <button onclick="toggleMobileMenu()" class="lg:hidden w-8 h-8 flex items-center justify-center text-zinc-400">
+                    <i class="fas fa-bars-staggered"></i>
                 </button>
-                <div id="ws-status-mobile" class="w-2 h-2 rounded-full bg-red-500"></div>
+                <h2 class="font-bold text-xs uppercase tracking-tighter">PIXUP8K <span class="lg:hidden text-zinc-500 ml-2">Neural Hub</span></h2>
+            </div>
+            <div class="flex items-center gap-3">
+                <div class="flex flex-col items-end hidden sm:flex">
+                    <span class="text-[9px] font-bold uppercase text-emerald-500 tracking-widest">Active Link</span>
+                    <span id="mobile-email-status" class="text-[8px] text-zinc-500">--</span>
+                </div>
+                <div class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
             </div>
         </div>
 
         <!-- Message History -->
-        <div id="generation-display" class="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 chat-container relative">
+        <div id="generation-display" class="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 chat-container">
             <!-- Empty State -->
-            <div id="empty-state" class="h-full flex flex-col items-center justify-center text-center opacity-40 px-4">
-                <div class="w-16 h-16 mb-6 rounded-2xl border border-dashed border-zinc-700 flex items-center justify-center">
+            <div id="empty-state" class="h-full flex flex-col items-center justify-center text-center opacity-40 px-6">
+                <div class="w-16 h-16 mb-6 rounded-3xl border border-dashed border-zinc-700 flex items-center justify-center">
                     <i class="fas fa-wand-magic-sparkles text-zinc-500 text-xl"></i>
                 </div>
-                <h3 class="text-lg md:text-xl font-medium tracking-tight">How can I help you create today?</h3>
-                <p class="text-[10px] md:text-xs text-zinc-500 mt-2 max-w-xs leading-relaxed">Describe an image to synthesize its digital latent form.</p>
+                <h3 class="text-xl font-medium tracking-tight">How can I help you create today?</h3>
+                <p class="text-xs text-zinc-500 mt-2 max-w-xs leading-relaxed">Describe an image to synthesize its digital latent form via our neural engine.</p>
             </div>
 
-            <div id="chat-history" class="max-w-3xl mx-auto w-full space-y-8 md:space-y-12">
-                <!-- Result container logic remains same -->
+            <!-- Chat History -->
+            <div id="chat-history" class="max-w-3xl mx-auto w-full space-y-8 md:space-y-12 pb-20">
                 <div id="result-container" class="hidden message-bubble">
+                    <!-- User Prompt -->
                     <div class="flex items-start gap-3 md:gap-4 mb-6">
-                        <div class="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center shrink-0">
+                        <div class="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center shrink-0 border border-white/5">
                             <i class="fas fa-user text-[10px] text-zinc-400"></i>
                         </div>
-                        <p id="active-prompt" class="text-xs md:text-sm text-zinc-300 leading-relaxed pt-1"></p>
+                        <p id="active-prompt" class="text-sm text-zinc-300 leading-relaxed pt-1"></p>
                     </div>
 
+                    <!-- Bot Response -->
                     <div class="flex items-start gap-3 md:gap-4">
                         <div class="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0 border border-emerald-500/20">
                             <i class="fas fa-brain text-[10px] text-emerald-500"></i>
                         </div>
                         <div class="flex-1 min-w-0">
-                            <div class="relative group inline-block max-w-full">
-                                <div class="bg-zinc-900 rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
+                            <div class="relative group inline-block w-full">
+                                <div class="bg-zinc-900 rounded-2xl overflow-hidden border border-white/10 shadow-2xl relative">
                                     <img id="generated-image" src="" class="w-full max-w-lg aspect-square object-cover opacity-0 transition-opacity duration-700">
                                     
-                                    <div id="loader-overlay" class="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900/80 backdrop-blur-sm rounded-2xl">
+                                    <div id="loader-overlay" class="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900/90 backdrop-blur-md">
                                         <div class="loader-ring mb-3"></div>
                                         <p class="text-[8px] font-bold uppercase tracking-[0.2em] text-emerald-500 animate-pulse">Synthesizing...</p>
                                         <p id="timer-text" class="text-zinc-500 text-[8px] mt-1 font-mono">0.0s</p>
                                     </div>
                                 </div>
 
-                                <div id="action-bar" class="hidden mt-4 flex flex-wrap items-center gap-2 md:gap-3">
-                                    <button onclick="downloadImage()" class="px-3 md:px-4 py-2 bg-zinc-900 border border-white/5 rounded-lg text-[8px] md:text-[9px] font-bold uppercase tracking-widest hover:bg-zinc-800 transition-all flex items-center">
+                                <div id="action-bar" class="hidden mt-4 flex flex-wrap items-center gap-2">
+                                    <button onclick="downloadImage()" class="flex-1 sm:flex-none px-4 py-2.5 bg-zinc-900 border border-white/5 rounded-xl text-[9px] font-bold uppercase tracking-widest hover:bg-zinc-800 transition-all">
                                         <i class="fas fa-download mr-2"></i> Save PNG
                                     </button>
-                                    <button onclick="copyLink()" class="px-3 md:px-4 py-2 bg-zinc-900 border border-white/5 rounded-lg text-[8px] md:text-[9px] font-bold uppercase tracking-widest hover:bg-zinc-800 transition-all flex items-center">
+                                    <button onclick="copyLink()" class="flex-1 sm:flex-none px-4 py-2.5 bg-zinc-900 border border-white/5 rounded-xl text-[9px] font-bold uppercase tracking-widest hover:bg-zinc-800 transition-all">
                                         <i class="fas fa-link mr-2"></i> Share Link
                                     </button>
                                 </div>
@@ -234,35 +256,81 @@
             </div>
         </div>
 
-        <!-- Input Area (Responsive) -->
-        <div class="p-4 md:p-8 sticky-input bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a] to-transparent shrink-0">
+        <!-- Input Area -->
+        <div class="p-4 md:p-8 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a] to-transparent shrink-0">
             <div class="max-w-3xl mx-auto w-full relative">
-                <div class="bg-[#161616] border border-white/10 rounded-2xl p-1 shadow-2xl transition-all focus-within:border-emerald-500/30">
-                    <div class="flex items-center px-2 md:px-4">
-                        <input type="text" id="prompt-input" placeholder="A futuristic city in the clouds..." 
-                            class="flex-1 bg-transparent py-3 md:py-4 text-xs md:text-sm outline-none placeholder:text-zinc-600 min-w-0">
-                        <button id="synth-btn" onclick="triggerSynthesis()" class="ml-2 w-10 h-10 md:w-12 md:h-12 bg-emerald-500 text-black rounded-xl hover:bg-emerald-400 active:scale-90 transition-all flex items-center justify-center shrink-0">
+                <div class="bg-[#161616] border border-white/10 rounded-2xl p-1.5 shadow-2xl transition-all focus-within:border-emerald-500/30">
+                    <div class="flex items-center px-3">
+                        <input type="text" id="prompt-input" autocomplete="off" placeholder="Imagine a futuristic city..." 
+                            class="flex-1 bg-transparent py-3 md:py-4 text-sm outline-none placeholder:text-zinc-600">
+                        <button id="synth-btn" onclick="triggerSynthesis()" class="ml-2 w-10 h-10 md:w-12 md:h-12 bg-emerald-500 text-black rounded-xl hover:bg-emerald-400 active:scale-90 transition-all flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
                             <i class="fas fa-paper-plane text-xs"></i>
                         </button>
                     </div>
                 </div>
-                <p class="text-[7px] md:text-[8px] text-zinc-600 text-center mt-3 uppercase tracking-widest">Powered by PIXUP8K Neural Engine</p>
+                <p class="text-[7px] md:text-[8px] text-zinc-600 text-center mt-3 uppercase tracking-[0.2em] font-medium">Powered by PIXUP8K Neural Architecture</p>
             </div>
         </div>
     </section>
 </main>
 
 <!-- Notification Toast -->
-<div id="toast" class="fixed bottom-24 left-1/2 -translate-x-1/2 px-6 py-3 bg-white text-black text-[9px] font-bold uppercase tracking-widest rounded-full opacity-0 translate-y-8 transition-all duration-500 z-[200] shadow-xl text-center whitespace-nowrap">
+<div id="toast" class="fixed bottom-24 lg:bottom-12 left-1/2 -translate-x-1/2 px-6 py-3 bg-white text-black text-[9px] font-bold uppercase tracking-widest rounded-full opacity-0 translate-y-8 transition-all duration-500 z-[200] shadow-2xl whitespace-nowrap">
     System Notification
 </div>
 
 <script>
-    // --- LOGIC PRESERVED 100% ---
+    // --- Logic & State (Preserved 100%) ---
     let token = localStorage.getItem('access_token');
     let ws = null;
     let chart = null;
     let particles, scene, camera, renderer;
+
+    function toggleMobileMenu() {
+        const menu = document.getElementById('mobile-sidebar');
+        if (menu.classList.contains('closed')) {
+            // Prepare content for mobile
+            const sidebarContent = document.querySelector('aside .flex-1').cloneNode(true);
+            const mobileContainer = document.getElementById('mobile-sidebar-content');
+            mobileContainer.innerHTML = '';
+            mobileContainer.appendChild(sidebarContent);
+            
+            // Re-render chart on mobile if user has data
+            setTimeout(() => {
+                const mobileCanvas = mobileContainer.querySelector('#quotaChart');
+                if (mobileCanvas) {
+                    const used = parseInt(document.getElementById('quota-used').innerText);
+                    const limit = parseInt(document.getElementById('quota-limit').innerText);
+                    renderMobileQuotaChart(mobileCanvas, used, limit);
+                }
+            }, 100);
+
+            menu.classList.remove('closed');
+        } else {
+            menu.classList.add('closed');
+        }
+    }
+
+    // Helper for mobile chart cloning logic
+    function renderMobileQuotaChart(canvas, used, limit) {
+        const ctx = canvas.getContext('2d');
+        const remains = Math.max(0, limit - used);
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                datasets: [{
+                    data: [used, remains],
+                    backgroundColor: ['#10b981', 'rgba(255,255,255,0.03)'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                cutout: '85%',
+                plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                maintainAspectRatio: false
+            }
+        });
+    }
 
     function initNeuralBackground() {
         scene = new THREE.Scene();
@@ -327,9 +395,11 @@
             const user = await res.json();
             if(!res.ok) return logout();
 
-            document.getElementById('ui-email').innerText = user.email;
-            const expiry = new Date(user.expires_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
-            document.getElementById('ui-expiry').innerText = `Expiry: ${expiry}`;
+            // Update UI across all views
+            const emails = document.querySelectorAll('#ui-email, #mobile-email-status');
+            emails.forEach(el => el.innerText = user.email);
+
+            document.getElementById('ui-expiry').innerText = `Expiry: ${new Date(user.expires_at).toLocaleDateString()}`;
 
             const used = user.image_generations_used;
             const limit = user.image_generations_limit;
@@ -344,7 +414,9 @@
     }
 
     function renderQuotaChart(used, limit) {
-        const ctx = document.getElementById('quotaChart').getContext('2d');
+        const canvas = document.getElementById('quotaChart');
+        if(!canvas) return;
+        const ctx = canvas.getContext('2d');
         const remains = Math.max(0, limit - used);
         if(chart) chart.destroy();
         chart = new Chart(ctx, {
@@ -368,12 +440,12 @@
     function initWS() {
         const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
         ws = new WebSocket(`${protocol}://${window.location.host}/ws/${token}`);
-        const indicator = document.querySelector('#ws-status span:last-child');
-        const mobileIndicator = document.getElementById('ws-status-mobile');
+        const indicators = [document.querySelector('#ws-status span:last-child')];
 
         ws.onopen = () => {
-            indicator.classList.replace('bg-red-500', 'bg-emerald-500');
-            if(mobileIndicator) mobileIndicator.classList.replace('bg-red-500', 'bg-emerald-500');
+            indicators.forEach(i => {
+                if(i) i.classList.replace('bg-red-500', 'bg-emerald-500');
+            });
             setInterval(() => { if(ws.readyState === 1) ws.send("ping"); }, 20000);
         };
 
@@ -383,8 +455,9 @@
         };
 
         ws.onclose = () => {
-            indicator.classList.replace('bg-emerald-500', 'bg-red-500');
-            if(mobileIndicator) mobileIndicator.classList.replace('bg-emerald-500', 'bg-red-500');
+            indicators.forEach(i => {
+                if(i) i.classList.replace('bg-emerald-500', 'bg-red-500');
+            });
             setTimeout(initWS, 5000);
         };
     }
@@ -431,13 +504,15 @@
                     img.classList.remove('opacity-0');
                     btn.disabled = false;
                     btn.classList.remove('opacity-50');
+                    promptInput.value = '';
                     syncUserData();
                     showToast("Synthesis Complete");
+                    
                     const container = document.getElementById('generation-display');
                     container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
                 };
             } else {
-                throw new Error(data.detail || "Quota Exceeded or Engine Error");
+                throw new Error(data.detail || "Quota Exceeded");
             }
         } catch (err) {
             clearInterval(timer);
@@ -483,11 +558,11 @@
             camera.updateProjectionMatrix();
             renderer.setSize(window.innerWidth, window.innerHeight);
         };
-        
-        // Handle enter key on input
-        document.getElementById('prompt-input').addEventListener('keypress', (e) => {
-            if(e.key === 'Enter') triggerSynthesis();
-        });
+    };
+
+    // Handle Enter key for synthesis
+    document.getElementById('prompt-input').onkeydown = (e) => {
+        if(e.key === 'Enter') triggerSynthesis();
     };
 </script>
 
