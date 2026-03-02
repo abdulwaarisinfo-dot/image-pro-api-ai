@@ -4,17 +4,18 @@ import logging
 import shutil
 import requests
 from datetime import datetime, timedelta
-from typing import Optional
+from typing import Optional, List, Dict, Any
 from PIL import Image  # For dimension detection & resize
 
 from fastapi import (
     FastAPI, UploadFile, File,
-    Depends, HTTPException, Request, Form
+    Depends, HTTPException, Request, Form, WebSocket, WebSocketDisconnect
 )
 from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from fastapi.security import OAuth2PasswordBearer
+from openai import OpenAI
 
 from jose import jwt, JWTError
 from passlib.context import CryptContext
@@ -35,6 +36,7 @@ logger = logging.getLogger("ImageAI_Pro")
 MONGO_URI = os.getenv("MONGO_URI", "").strip()  # MongoDB Atlas URI (mongodb+srv://...)
 JWT_SECRET = os.getenv("JWT_SECRET_KEY", "super-secret-key")
 CLIPDROP_API_KEY = os.getenv("CLIPDROP_API_KEY", "")
+OPENAI_API_KEY = os.getenv("OPEN_API_KEY", "")  # Consistent with your env name
 ALGORITHM = "HS256"
 
 # =========================================================
@@ -73,11 +75,7 @@ except Exception as e:
 # =========================================================
 # FASTAPI APP
 # =========================================================
-app = FastAPI(title="ImageAI Pro API",
-              docs_url= None,
-              redoc_url=None,
-              openapi_url=None
-             )
+app = FastAPI(title="ImageAI Pro API")
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 UPLOAD_DIR = os.path.join(BASE_DIR, "uploads")
@@ -99,6 +97,10 @@ def create_access_token(data: dict, hours: int = 12):
     return jwt.encode(payload, JWT_SECRET, algorithm=ALGORITHM)
 
 async def get_current_user(token: str = Depends(oauth2_scheme)):
+    """
+    Dependency to authenticate user. 
+    Quota checks are now moved to specific routes to allow independent usage.
+    """
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[ALGORITHM])
         email = payload.get("sub")
@@ -111,13 +113,36 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
 
+    # Time-based expiration check remains global
     if user.get("expires_at") and datetime.utcnow() > user["expires_at"]:
         raise HTTPException(status_code=403, detail="Subscription expired")
 
-    if user.get("images_used", 0) >= user.get("image_limit", 0):
-        raise HTTPException(status_code=403, detail="Image quota reached")
-
     return user
+
+# =========================================================
+# REAL-TIME CONNECTION MANAGER (WEBSOCKETS)
+# =========================================================
+class ConnectionManager:
+    """Manages active WebSocket connections for real-time notifications."""
+    def __init__(self):
+        self.active_connections: Dict[str, WebSocket] = {}
+
+    async def connect(self, email: str, websocket: WebSocket):
+        await websocket.accept()
+        self.active_connections[email] = websocket
+        logger.info(f"WebSocket: User {email} connected. Active: {len(self.active_connections)}")
+
+    def disconnect(self, email: str):
+        if email in self.active_connections:
+            del self.active_connections[email]
+            logger.info(f"WebSocket: User {email} disconnected.")
+
+    async def send_personal_message(self, message: dict, email: str):
+        websocket = self.active_connections.get(email)
+        if websocket:
+            await websocket.send_json(message)
+
+manager = ConnectionManager()
 
 # =========================================================
 # ROUTES
@@ -125,6 +150,10 @@ async def get_current_user(token: str = Depends(oauth2_scheme)):
 @app.get("/", response_class=HTMLResponse)
 async def chat_ui(request: Request):
     return templates.TemplateResponse("chat.html", {"request": request})
+
+@app.get("/app", response_class=HTMLResponse)
+async def app_interface(request: Request):
+    return templates.TemplateResponse("page.html", {"request": request})
 
 # -------------------- AUTH --------------------
 @app.post("/login", tags=["Auth"])
@@ -143,14 +172,20 @@ async def me(user: dict = Depends(get_current_user)):
         "image_limit": user["image_limit"],
         "images_used": user["images_used"],
         "expires_at": user["expires_at"],
+        "image_generations_limit": user["image_generations_limit"],
+        "image_generations_used": user["image_generations_used"]
     }
 
-# -------------------- IMAGE UPLOAD --------------------
+# -------------------- IMAGE UPLOAD (UPSCALING) --------------------
 @app.post("/images/upload")
 async def upload_image(
     file: UploadFile = File(...),
     user: dict = Depends(get_current_user)
 ):
+    # CRITICAL CHANGE: Upscaling quota check is now isolated here
+    if user.get("images_used", 0) >= user.get("image_limit", 0):
+        raise HTTPException(status_code=403, detail="Upscaling quota reached. Text-to-Image might still be available.")
+
     ext = os.path.splitext(file.filename)[1].lower()
     if ext not in [".png", ".jpg", ".jpeg", ".jfif"]:
         raise HTTPException(status_code=400, detail="Only PNG or JPG images are supported")
@@ -243,44 +278,17 @@ def download_image(filename: str):
 def seed_users():
     users = [
         {
-            "email": "waris12345@gmail.com",
-            "password_hash": hash_password(""),
+            "email": "waris123@gmail.com",
+            "password_hash": hash_password("123"),
             "password_set_at": datetime.utcnow(),
             "password_expires_at": datetime.utcnow() + timedelta(days=1),
             "image_limit": 233,
             "images_used": 0,
+            "image_generations_limit": 35,
+            "image_generations_used": 0,
             "active": True,
             "expires_at": datetime.utcnow() + timedelta(days=34)
-        },
-        {
-            "email": "user4@gmail.com",
-            "password_hash": hash_password("123W"),
-            "password_set_at": datetime.utcnow(),
-            "password_expires_at": datetime.utcnow() + timedelta(days=1),
-            "image_limit": 10,
-            "images_used": 0,
-            "active": True,
-            "expires_at": datetime.utcnow() + timedelta(days=34)
-        },
-        {
-            "email": "user5@gmail.com",
-            "password_hash": hash_password(""),
-            "password_set_at": datetime.utcnow(),
-            "password_expires_at": datetime.utcnow() + timedelta(days=1),
-            "image_limit": 10,
-            "images_used": 0,
-            "active": True,
-            "expires_at": datetime.utcnow() + timedelta(days=34)
-        },
-
-      {  "email": "user1@gmail.com",
-            "password_hash": hash_password(""),
-            "password_set_at": datetime.utcnow(),
-            "password_expires_at": datetime.utcnow() + timedelta(days=1),
-            "image_limit": 2,
-            "images_used": 0,
-            "active": True,
-            "expires_at": datetime.utcnow() + timedelta(days=1)}
+        }       
     ]
 
     added = 0
@@ -323,6 +331,126 @@ def renew_user(
         update["images_used"] = 0
     if new_image_limit is not None:
         update["image_limit"] = new_image_limit
+
+    users_col.update_one({"email": email}, {"$set": update})
+    return {"message": "User renewed successfully"}
+
+
+# =========================================================
+# FEATURE 2: TEXT-TO-IMAGE (OPENAI DALL-E) - FIXED
+# =========================================================
+@app.post("/images/generate", tags=["AI Features"])
+async def generate_from_text(
+    prompt: str = Form(...),
+    user: dict = Depends(get_current_user)
+):
+    """Generates an image from prompt using OpenAI and counts against quota."""
+    
+    # 1. Check Configuration
+    if not OPENAI_API_KEY:
+        raise HTTPException(status_code=500, detail="OpenAI service not configured")
+
+    # 2. Quota Check (Isolated to Text-to-Image)
+    if user.get("image_generations_used", 0) >= user.get("image_generations_limit", 10):
+        raise HTTPException(status_code=403, detail="Neural generation quota exceeded. Upscaling might still be available.")
+
+    logger.info(f"User {user['email']} generating image: {prompt[:50]}...")
+
+    try:
+        client = OpenAI(api_key=OPENAI_API_KEY)
+        
+        response = client.images.generate(
+            model="dall-e-3",
+            prompt=prompt,
+            n=1,
+            size="1024x1024"
+        )
+        
+        image_url = response.data[0].url
+        
+        # 4. Download Image
+        img_res = requests.get(image_url)
+        if img_res.status_code != 200:
+            raise Exception("Failed to download image from OpenAI servers")
+        
+        img_data = img_res.content
+        
+        # 5. Ensure Directory Exists
+        if not os.path.exists(OUTPUT_DIR):
+            os.makedirs(OUTPUT_DIR)
+
+        image_id = str(uuid.uuid4())
+        filename = f"{image_id}_generated.png"
+        file_path = os.path.join(OUTPUT_DIR, filename)
+
+        with open(file_path, "wb") as f:
+            f.write(img_data)
+
+        # 6. Log usage
+        users_col.update_one(
+            {"email": user["email"]},
+            {"$inc": {"image_generations_used": 1}} 
+        )
+
+        return {
+            "status": "success",
+            "type": "generation",
+            "prompt": prompt,
+            "download_url": f"/processed/{filename}"
+        }
+
+    except Exception as e:
+        logger.error(f"OpenAI generation error: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Generation failed: {str(e)}")
+    
+# =========================================================
+# REAL-TIME WEBSOCKET ENDPOINT
+# =========================================================
+@app.websocket("/ws/{token}")
+async def websocket_endpoint(websocket: WebSocket, token: str):
+    """WebSocket for real-time status updates."""
+    try:
+        payload = jwt.decode(token, JWT_SECRET, algorithms=[ALGORITHM])
+        email = payload.get("sub")
+        if not email:
+            await websocket.close(code=4001)
+            return
+    except:
+        await websocket.close(code=4001)
+        return
+
+    await manager.connect(email, websocket)
+    try:
+        while True:
+            await websocket.receive_text()
+            await manager.send_personal_message({"type": "pong", "data": "alive"}, email)
+    except WebSocketDisconnect:
+        manager.disconnect(email)
+    except Exception as e:
+        logger.error(f"WebSocket error for {email}: {e}")
+        manager.disconnect(email)
+        
+
+# -------------------- Renew user (Alternative endpoint) --------------------
+@app.post("/image/renew", tags=["Admin"])
+def renew_user_alt(
+    email: str,
+    extra_days: int = 30,
+    reset_counter: bool = True,
+    new_image_limit: Optional[int] = None
+):
+    user = users_col.find_one({"email": email})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    update = {
+        "expires_at": datetime.utcnow() + timedelta(days=extra_days),
+        "active": True
+    }
+    if reset_counter:
+        update["image_generations_used"] = 0
+    if new_image_limit is not None:
+        update["image_generations_limit"] = new_image_limit
 
     users_col.update_one({"email": email}, {"$set": update})
     return {"message": "User renewed successfully"}
