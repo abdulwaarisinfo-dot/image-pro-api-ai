@@ -110,7 +110,6 @@
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-premium { animation: fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
         
-        /* Mobile UI Fixes */
         .app-container {
             display: flex;
             flex-direction: column;
@@ -118,6 +117,18 @@
             width: 100%;
             position: relative;
             z-index: 10;
+        }
+
+        /* Mobile Responsive Sidebar Fixes */
+        .sidebar-responsive {
+            width: 100%;
+            max-height: 220px;
+        }
+        @media (min-width: 768px) {
+            .sidebar-responsive {
+                width: 18rem; /* 72px equivalent */
+                max-height: none;
+            }
         }
     </style>
 </head>
@@ -190,7 +201,7 @@
             <p class="text-zinc-500 text-xs md:text-sm">Unlock full neural capacity for high-scale workflows.</p>
         </div>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <!-- Lite -->
+            <!-- Solo -->
             <div class="glass-panel p-6 md:p-10 rounded-[32px] flex flex-col">
                 <h4 class="text-zinc-500 text-[10px] font-bold uppercase tracking-widest mb-2">Solo</h4>
                 <div class="text-3xl md:text-5xl font-bold mb-6">850pkr</div>
@@ -269,32 +280,30 @@
     </header>
 
     <div class="flex-1 flex flex-col md:flex-row overflow-hidden">
-        <!-- Sidebar -->
-        <aside class="w-full md:w-72 border-b md:border-b-0 md:border-r border-white/5 p-4 md:p-8 space-y-6 bg-zinc-950/30 overflow-x-auto md:overflow-y-auto shrink-0">
-            <div class="min-w-[200px] md:min-w-0">
-                <p class="text-[9px] uppercase tracking-widest text-zinc-500 font-bold mb-3">Balance</p>
-                <div class="p-4 glass-panel rounded-2xl border-white/5">
-                    <div class="flex justify-between items-end mb-2">
-                        <span id="usage-val" class="text-xl md:text-2xl font-bold">--</span>
-                        <span class="text-[8px] font-bold text-zinc-500 mb-1 uppercase">Tokens Left</span>
+        <!-- Responsive Sidebar -->
+        <aside class="sidebar-responsive border-b md:border-b-0 md:border-r border-white/5 p-4 md:p-8 space-y-4 md:space-y-6 bg-zinc-950/30 overflow-x-auto md:overflow-y-auto shrink-0 custom-scroll">
+            <div class="flex flex-row md:flex-col gap-4 md:gap-6 w-full">
+                <div class="flex-1 min-w-[140px] md:min-w-0">
+                    <p class="text-[9px] uppercase tracking-widest text-zinc-500 font-bold mb-2 md:mb-3">Balance</p>
+                    <div class="p-3 md:p-4 glass-panel rounded-xl md:rounded-2xl border-white/5">
+                        <div class="flex justify-between items-end mb-2">
+                            <span id="usage-val" class="text-lg md:text-2xl font-bold">--</span>
+                            <span class="text-[8px] font-bold text-zinc-500 mb-0.5 uppercase">Tokens</span>
+                        </div>
+                        <div class="h-1 w-full bg-zinc-900 rounded-full overflow-hidden">
+                            <div id="usage-bar" class="h-full bg-emerald-500" style="width:0%"></div>
+                        </div>
+                        <p id="usage-text" class="text-[7px] md:text-[8px] text-zinc-600 mt-2 font-bold uppercase tracking-widest truncate">Loading...</p>
                     </div>
-                    <div class="h-1 w-full bg-zinc-900 rounded-full overflow-hidden">
-                        <div id="usage-bar" class="h-full bg-emerald-500" style="width:0%"></div>
-                    </div>
-                    <p id="usage-text" class="text-[8px] text-zinc-600 mt-3 font-bold uppercase tracking-widest">Loading...</p>
                 </div>
-            </div>
 
-            <div class="space-y-4">
-                <p class="text-[9px] uppercase tracking-widest text-zinc-500 font-bold">Specs</p>
-                <div class="flex justify-between text-[10px] py-2 border-b border-white/5">
-                    <span class="text-zinc-500">Engine</span>
-                    <span class="text-emerald-500 font-bold">Neural 8K</span>
+                <div class="flex-1 md:flex-none space-y-3 md:space-y-4 min-w-[140px] md:min-w-0">
+                    <p class="hidden md:block text-[9px] uppercase tracking-widest text-zinc-500 font-bold">Options</p>
+                    <button onclick="redirectToAppPage()" class="w-full p-3 border border-emerald-500/20 bg-emerald-500/5 rounded-xl flex items-center justify-between text-[9px] font-bold uppercase tracking-widest hover:bg-emerald-500 hover:text-black group transition-all">
+                        <span class="flex items-center gap-2"><i class="fas fa-magic"></i> AI GEN</span>
+                        <i class="fas fa-chevron-right opacity-50 group-hover:opacity-100 hidden md:block"></i>
+                    </button>
                 </div>
-                <button onclick="redirectToAppPage()" class="w-full p-3 border border-emerald-500/20 bg-emerald-500/5 rounded-xl flex items-center justify-between text-[9px] font-bold uppercase tracking-widest hover:bg-emerald-500 hover:text-black group transition-all">
-                    <span class="flex items-center gap-2"><i class="fas fa-magic"></i> Text to Image</span>
-                    <i class="fas fa-chevron-right opacity-50 group-hover:opacity-100"></i>
-                </button>
             </div>
         </aside>
 
@@ -302,10 +311,10 @@
         <section class="flex-1 flex flex-col p-3 md:p-6 bg-[#080808] overflow-hidden">
             <div id="chat-messages" class="flex-1 overflow-y-auto space-y-6 custom-scroll pb-6 px-1 md:px-4">
                 <div id="empty-state" class="h-full flex flex-col items-center justify-center text-center opacity-30 px-4">
-                    <div class="w-16 h-16 mb-4 bg-zinc-900 rounded-2xl flex items-center justify-center border border-dashed border-zinc-700">
-                        <i class="fas fa-plus text-xl"></i>
+                    <div class="w-12 h-12 md:w-16 md:h-16 mb-4 bg-zinc-900 rounded-2xl flex items-center justify-center border border-dashed border-zinc-700">
+                        <i class="fas fa-plus text-lg md:text-xl"></i>
                     </div>
-                    <h3 class="text-sm md:text-base font-bold">Ready for reconstruction</h3>
+                    <h3 class="text-xs md:text-base font-bold">Ready for reconstruction</h3>
                     <p class="text-[10px] md:text-xs">Upload your image to begin 8K processing.</p>
                 </div>
             </div>
@@ -328,9 +337,9 @@
                         <i class="fas fa-arrow-up text-sm"></i>
                         <input type="file" id="file-input" class="hidden" accept="image/*" onchange="handleFile(event)">
                     </label>
-                    <input type="text" id="status-text" readonly placeholder="Select source file..." class="flex-1 bg-transparent px-2 outline-none text-xs text-zinc-400 font-medium truncate">
-                    <button id="process-btn" disabled onclick="startProcessing()" class="px-5 md:px-8 py-3 md:py-4 bg-emerald-500 text-black font-bold text-[10px] uppercase tracking-widest rounded-full disabled:opacity-20 transition-all shrink-0">
-                        PROCESS <span class="hidden sm:inline">8K</span> <i class="fas fa-bolt ml-1"></i>
+                    <input type="text" id="status-text" readonly placeholder="Select source file..." class="flex-1 bg-transparent px-2 outline-none text-[10px] md:text-xs text-zinc-400 font-medium truncate">
+                    <button id="process-btn" disabled onclick="startProcessing()" class="px-5 md:px-8 py-3 md:py-4 bg-emerald-500 text-black font-bold text-[9px] md:text-[10px] uppercase tracking-widest rounded-full disabled:opacity-20 transition-all shrink-0">
+                        GO <span class="hidden sm:inline">8K</span> <i class="fas fa-bolt ml-1"></i>
                     </button>
                 </div>
                 <p class="text-[8px] text-zinc-600 text-center mt-3 uppercase tracking-widest font-bold">Neural Engine v4.0.1 Stable</p>
@@ -388,7 +397,6 @@ function togglePricing(show) { document.getElementById('pricing-screen').classLi
 function showLogin() { document.getElementById('login-view').classList.remove('hidden'); document.getElementById('login-error').classList.add('hidden'); }
 function hideLogin() { document.getElementById('login-view').classList.add('hidden'); }
 
-// NEW: Redirect function for Text to Image buttons
 function redirectToAppPage() {
     window.location.href = '/app';
 }
@@ -473,7 +481,7 @@ async function startProcessing() {
     const container = document.getElementById('chat-messages');
     const bubbleId = 'proc-' + Date.now();
     const wrap = document.createElement('div');
-    wrap.className = 'animate-premium max-w-4xl mx-auto w-full mb-8';
+    wrap.className = 'animate-premium max-w-4xl mx-auto w-full mb-8 px-2 md:px-0';
     wrap.innerHTML = `
         <div class="glass-panel rounded-[24px] md:rounded-[40px] overflow-hidden p-5 md:p-8 border-white/10 bg-zinc-950/40">
             <div class="flex justify-between items-center mb-6">
@@ -510,7 +518,7 @@ async function startProcessing() {
                 <p class="text-[9px] font-medium text-zinc-400 uppercase">Task Successfully Completed</p>
                 <div class="flex gap-4 w-full md:w-auto">
                     <button onclick="this.closest('.animate-premium').remove()" class="flex-1 md:flex-none text-[10px] font-bold uppercase tracking-widest text-zinc-500">Dismiss</button>
-                    <a id="dl-${bubbleId}" href="#" download class="flex-1 md:flex-none text-center px-6 py-3 rounded-xl bg-white text-black text-[10px] font-bold uppercase tracking-widest">Download 8K</a>
+                    <a id="dl-${bubbleId}" href="#" download class="flex-1 md:flex-none text-center px-6 py-3 rounded-xl bg-white text-black text-[10px] font-bold uppercase tracking-widest">Download</a>
                 </div>
             </div>
         </div>
