@@ -1,0 +1,472 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PIXUP8K | Neural Chat Synthesis</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        :root {
+            --accent: #10b981;
+            --accent-glow: rgba(16, 185, 129, 0.2);
+            --bg-deep: #0a0a0a;
+            --panel: #121212;
+            --border: rgba(255, 255, 255, 0.05);
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-deep);
+            color: #ececec;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .chat-container {
+            scrollbar-width: thin;
+            scrollbar-color: #333 transparent;
+        }
+        .chat-container::-webkit-scrollbar { width: 6px; }
+        .chat-container::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
+
+        #canvas-container {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 0; pointer-events: none;
+            opacity: 0.15;
+        }
+
+        .glass-panel {
+            background: var(--panel);
+            border: 1px solid var(--border);
+        }
+
+        .message-bubble {
+            animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .loader-ring {
+            border: 2px solid rgba(16, 185, 129, 0.1);
+            border-top: 2px solid var(--accent);
+            border-radius: 50%;
+            width: 24px; height: 24px;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .hidden-section { display: none !important; }
+
+        input:focus { box-shadow: 0 0 20px var(--accent-glow); }
+    </style>
+</head>
+<body class="flex flex-col">
+
+<div id="canvas-container"></div>
+
+<!-- Login Overlay (Logic Preserved) -->
+<div id="login-screen" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-md px-4">
+    <div class="glass-panel p-8 rounded-3xl w-full max-w-md shadow-2xl border-white/5">
+        <div class="flex flex-col items-center mb-8">
+            <div class="w-10 h-10 bg-emerald-500 rounded-lg mb-4 flex items-center justify-center">
+                <i class="fas fa-brain text-black text-sm"></i>
+            </div>
+            <h2 class="text-2xl font-bold tracking-tight uppercase">Neural <span class="text-emerald-500">Link</span></h2>
+            <p class="text-zinc-500 text-[10px] mt-2 font-bold uppercase tracking-[0.2em]">Authorized Personnel Only</p>
+        </div>
+        <form id="login-form" class="space-y-4">
+            <div>
+                <input type="email" name="email" required placeholder="Email Address" 
+                    class="w-full bg-zinc-900 border border-white/5 rounded-xl px-5 py-3.5 text-sm outline-none focus:border-emerald-500/50 transition-all">
+            </div>
+            <div>
+                <input type="password" name="password" required placeholder="Access Key" 
+                    class="w-full bg-zinc-900 border border-white/5 rounded-xl px-5 py-3.5 text-sm outline-none focus:border-emerald-500/50 transition-all">
+            </div>
+            <button type="submit" class="w-full py-3.5 bg-emerald-500 text-black font-bold text-xs uppercase tracking-widest rounded-xl hover:bg-emerald-400 transition-all mt-2">
+                Establish Connection
+            </button>
+        </form>
+    </div>
+</div>
+
+<main id="app-interface" class="relative z-10 flex h-screen w-full overflow-hidden hidden-section">
+    
+    <!-- Sidebar -->
+    <aside class="hidden lg:flex w-72 border-r border-white/5 flex-col bg-[#0d0d0d] shrink-0">
+        <div class="p-6 border-b border-white/5 flex items-center gap-3">
+            <div class="w-5 h-5 bg-emerald-500 rounded flex items-center justify-center">
+                <i class="fas fa-bolt text-[10px] text-black"></i>
+            </div>
+            <h1 class="font-bold tracking-tighter text-sm uppercase">PIXUP8K <span class="text-zinc-500 font-medium text-[10px]">V2</span></h1>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-6 space-y-8">
+            <!-- Quota Section -->
+            <div>
+                <p class="text-[9px] uppercase tracking-[0.2em] text-zinc-500 font-bold mb-4">Neural Quota</p>
+                <div class="bg-white/5 rounded-2xl p-5 border border-white/5">
+                    <div class="relative w-32 h-32 mx-auto mb-4">
+                        <canvas id="quotaChart"></canvas>
+                        <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                            <span id="quota-percent" class="text-lg font-bold text-white leading-none">0%</span>
+                            <span class="text-[7px] uppercase tracking-widest text-zinc-500 mt-1">Used</span>
+                        </div>
+                    </div>
+                    <div class="flex justify-between text-center">
+                        <div>
+                            <p id="quota-used" class="text-[11px] font-bold text-white">0</p>
+                            <p class="text-[8px] text-zinc-500 uppercase">Used</p>
+                        </div>
+                        <div class="h-6 w-px bg-white/10"></div>
+                        <div>
+                            <p id="quota-limit" class="text-[11px] font-bold text-white">0</p>
+                            <p class="text-[8px] text-zinc-500 uppercase">Limit</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats & Status -->
+            <div class="space-y-4">
+                <div id="ws-status" class="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5">
+                    <span class="text-[9px] font-bold uppercase tracking-widest text-zinc-400">System Link</span>
+                    <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.5)]"></span>
+                </div>
+                <div class="p-3 bg-white/5 rounded-xl border border-white/5">
+                    <p id="ui-email" class="text-[10px] font-bold text-zinc-300 truncate">user@neural.link</p>
+                    <p id="ui-expiry" class="text-[8px] text-zinc-500 uppercase tracking-tighter mt-1">Expiry: --</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-6 border-t border-white/5">
+            <button onclick="logout()" class="w-full flex items-center justify-center gap-2 py-3 text-[10px] font-bold uppercase tracking-widest text-zinc-500 hover:text-white hover:bg-white/5 rounded-xl transition-all">
+                <i class="fas fa-power-off text-[8px]"></i>
+                Terminate Session
+            </button>
+        </div>
+    </aside>
+
+    <!-- Chat Display Area -->
+    <section class="flex-1 flex flex-col relative bg-[#0a0a0a]">
+        <!-- Top Bar (Mobile Status) -->
+        <div class="lg:hidden h-14 border-b border-white/5 flex items-center justify-between px-4 bg-black/50 backdrop-blur-md">
+            <h2 class="font-bold text-xs uppercase tracking-tighter">PIXUP8K</h2>
+            <div class="w-2 h-2 rounded-full bg-emerald-500"></div>
+        </div>
+
+        <!-- Message History -->
+        <div id="generation-display" class="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 chat-container">
+            <!-- Empty State -->
+            <div id="empty-state" class="h-full flex flex-col items-center justify-center text-center opacity-40">
+                <div class="w-16 h-16 mb-6 rounded-2xl border border-dashed border-zinc-700 flex items-center justify-center">
+                    <i class="fas fa-wand-magic-sparkles text-zinc-500 text-xl"></i>
+                </div>
+                <h3 class="text-xl font-medium tracking-tight">How can I help you create today?</h3>
+                <p class="text-xs text-zinc-500 mt-2 max-w-xs leading-relaxed">Describe an image to synthesize its digital latent form.</p>
+            </div>
+
+            <!-- This is where generated content will append in a chat-like fashion -->
+            <div id="chat-history" class="max-w-3xl mx-auto w-full space-y-12">
+                <!-- Result container will be moved here logically -->
+                <div id="result-container" class="hidden message-bubble">
+                    <div class="flex items-start gap-4 mb-6">
+                        <div class="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center shrink-0">
+                            <i class="fas fa-user text-[10px] text-zinc-400"></i>
+                        </div>
+                        <p id="active-prompt" class="text-sm text-zinc-300 leading-relaxed pt-1"></p>
+                    </div>
+
+                    <div class="flex items-start gap-4">
+                        <div class="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0 border border-emerald-500/20">
+                            <i class="fas fa-brain text-[10px] text-emerald-500"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="relative group inline-block max-w-full">
+                                <div class="bg-zinc-900 rounded-2xl overflow-hidden border border-white/10 shadow-2xl">
+                                    <img id="generated-image" src="" class="w-full max-w-lg aspect-square object-cover opacity-0 transition-opacity duration-700">
+                                    
+                                    <div id="loader-overlay" class="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900/80 backdrop-blur-sm rounded-2xl">
+                                        <div class="loader-ring mb-3"></div>
+                                        <p class="text-[8px] font-bold uppercase tracking-[0.2em] text-emerald-500 animate-pulse">Synthesizing...</p>
+                                        <p id="timer-text" class="text-zinc-500 text-[8px] mt-1 font-mono">0.0s</p>
+                                    </div>
+                                </div>
+
+                                <div id="action-bar" class="hidden mt-4 flex items-center gap-3">
+                                    <button onclick="downloadImage()" class="px-4 py-2 bg-zinc-900 border border-white/5 rounded-lg text-[9px] font-bold uppercase tracking-widest hover:bg-zinc-800 transition-all">
+                                        <i class="fas fa-download mr-2"></i> Save PNG
+                                    </button>
+                                    <button onclick="copyLink()" class="px-4 py-2 bg-zinc-900 border border-white/5 rounded-lg text-[9px] font-bold uppercase tracking-widest hover:bg-zinc-800 transition-all">
+                                        <i class="fas fa-link mr-2"></i> Share Link
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="p-4 md:p-8 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a] to-transparent">
+            <div class="max-w-3xl mx-auto w-full relative">
+                <div class="bg-[#161616] border border-white/10 rounded-2xl p-1 shadow-2xl transition-all focus-within:border-emerald-500/30">
+                    <div class="flex items-center px-4">
+                        <input type="text" id="prompt-input" placeholder="A futuristic city in the clouds, cyberpunk style..." 
+                            class="flex-1 bg-transparent py-4 text-sm outline-none placeholder:text-zinc-600">
+                        <button id="synth-btn" onclick="triggerSynthesis()" class="ml-2 w-10 h-10 bg-emerald-500 text-black rounded-xl hover:bg-emerald-400 active:scale-90 transition-all flex items-center justify-center">
+                            <i class="fas fa-paper-plane text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+                <p class="text-[8px] text-zinc-600 text-center mt-3 uppercase tracking-widest">Powered by PIXUP8K Neural Engine</p>
+            </div>
+        </div>
+    </section>
+</main>
+
+<!-- Notification Toast -->
+<div id="toast" class="fixed bottom-24 left-1/2 -translate-x-1/2 px-6 py-3 bg-white text-black text-[9px] font-bold uppercase tracking-widest rounded-full opacity-0 translate-y-8 transition-all duration-500 z-[200] shadow-xl">
+    System Notification
+</div>
+
+<script>
+    // --- LOGIC 100% AS IS ---
+    let token = localStorage.getItem('access_token');
+    let ws = null;
+    let chart = null;
+    let particles, scene, camera, renderer;
+
+    function initNeuralBackground() {
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+        renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+        
+        const geometry = new THREE.BufferGeometry();
+        const vertices = [];
+        for (let i = 0; i < 2500; i++) {
+            vertices.push(THREE.MathUtils.randFloatSpread(2000), THREE.MathUtils.randFloatSpread(2000), THREE.MathUtils.randFloatSpread(2000));
+        }
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+        particles = new THREE.Points(geometry, new THREE.PointsMaterial({ color: 0x10b981, size: 1.2, transparent: true, opacity: 0.4 }));
+        scene.add(particles);
+        camera.position.z = 800;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            particles.rotation.y += 0.0003;
+            particles.rotation.x += 0.0001;
+            renderer.render(scene, camera);
+        }
+        animate();
+    }
+
+    document.getElementById('login-form').onsubmit = async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        try {
+            const res = await fetch('/login', { method: 'POST', body: formData });
+            const data = await res.json();
+            if(res.ok) {
+                token = data.access_token;
+                localStorage.setItem('access_token', token);
+                initializeSession();
+            } else {
+                showToast(data.detail || "Authentication Failed");
+            }
+        } catch (err) { showToast("Network Error"); }
+    };
+
+    function logout() {
+        localStorage.removeItem('access_token');
+        location.reload();
+    }
+
+    async function initializeSession() {
+        if(!token) return;
+        document.getElementById('login-screen').classList.add('hidden-section');
+        document.getElementById('app-interface').classList.remove('hidden-section');
+        await syncUserData();
+        initWS();
+    }
+
+    async function syncUserData() {
+        try {
+            const res = await fetch('/me', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const user = await res.json();
+            if(!res.ok) return logout();
+
+            document.getElementById('ui-email').innerText = user.email;
+            const expiry = new Date(user.expires_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' });
+            document.getElementById('ui-expiry').innerText = `Expiry: ${expiry}`;
+
+            const used = user.image_generations_used;
+            const limit = user.image_generations_limit;
+            
+            document.getElementById('quota-used').innerText = used;
+            document.getElementById('quota-limit').innerText = limit;
+            const perc = Math.round((used / limit) * 100) || 0;
+            document.getElementById('quota-percent').innerText = `${perc}%`;
+
+            renderQuotaChart(used, limit);
+        } catch (err) { console.error(err); }
+    }
+
+    function renderQuotaChart(used, limit) {
+        const ctx = document.getElementById('quotaChart').getContext('2d');
+        const remains = Math.max(0, limit - used);
+        if(chart) chart.destroy();
+        chart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                datasets: [{
+                    data: [used, remains],
+                    backgroundColor: ['#10b981', 'rgba(255,255,255,0.03)'],
+                    borderWidth: 0,
+                    hoverOffset: 0
+                }]
+            },
+            options: {
+                cutout: '85%',
+                plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                maintainAspectRatio: false
+            }
+        });
+    }
+
+    function initWS() {
+        const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        ws = new WebSocket(`${protocol}://${window.location.host}/ws/${token}`);
+        const indicator = document.querySelector('#ws-status span:last-child');
+
+        ws.onopen = () => {
+            indicator.classList.replace('bg-red-500', 'bg-emerald-500');
+            setInterval(() => { if(ws.readyState === 1) ws.send("ping"); }, 20000);
+        };
+
+        ws.onmessage = (e) => {
+            const msg = JSON.parse(e.data);
+            if(msg.type === 'notification') showToast(msg.data);
+        };
+
+        ws.onclose = () => {
+            indicator.classList.replace('bg-emerald-500', 'bg-red-500');
+            setTimeout(initWS, 5000);
+        };
+    }
+
+    async function triggerSynthesis() {
+        const promptInput = document.getElementById('prompt-input');
+        const prompt = promptInput.value.trim();
+        const btn = document.getElementById('synth-btn');
+        if(!prompt) return showToast("Prompt Required");
+
+        document.getElementById('empty-state').classList.add('hidden');
+        document.getElementById('result-container').classList.remove('hidden');
+        document.getElementById('loader-overlay').classList.remove('hidden-section');
+        document.getElementById('action-bar').classList.add('hidden');
+        document.getElementById('generated-image').classList.add('opacity-0');
+        document.getElementById('active-prompt').innerText = prompt;
+        
+        btn.disabled = true;
+        btn.classList.add('opacity-50');
+
+        let seconds = 0;
+        const timer = setInterval(() => {
+            seconds += 0.1;
+            document.getElementById('timer-text').innerText = `${seconds.toFixed(1)}s`;
+        }, 100);
+
+        try {
+            const formData = new FormData();
+            formData.append('prompt', prompt);
+            const res = await fetch('/images/generate', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: formData
+            });
+            const data = await res.json();
+            
+            if(res.ok) {
+                const img = document.getElementById('generated-image');
+                img.src = data.download_url;
+                img.onload = () => {
+                    clearInterval(timer);
+                    document.getElementById('loader-overlay').classList.add('hidden-section');
+                    document.getElementById('action-bar').classList.remove('hidden');
+                    img.classList.remove('opacity-0');
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-50');
+                    syncUserData();
+                    showToast("Synthesis Complete");
+                    // Scroll to bottom
+                    const container = document.getElementById('generation-display');
+                    container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+                };
+            } else {
+                throw new Error(data.detail || "Quota Exceeded or Engine Error");
+            }
+        } catch (err) {
+            clearInterval(timer);
+            showToast(err.message);
+            btn.disabled = false;
+            btn.classList.remove('opacity-50');
+            document.getElementById('loader-overlay').classList.add('hidden-section');
+        }
+    }
+
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        t.innerText = msg;
+        t.classList.remove('opacity-0', 'translate-y-8');
+        setTimeout(() => t.classList.add('opacity-0', 'translate-y-8'), 3000);
+    }
+
+    function downloadImage() {
+        const url = document.getElementById('generated-image').src;
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `PIXUP8K_${Date.now()}.png`;
+        a.click();
+    }
+
+    function copyLink() {
+        const url = document.getElementById('generated-image').src;
+        const fullUrl = window.location.origin + url;
+        const el = document.createElement('textarea');
+        el.value = fullUrl;
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand('copy');
+        document.body.removeChild(el);
+        showToast("Neural Link Copied");
+    }
+
+    window.onload = () => {
+        initNeuralBackground();
+        if(token) initializeSession();
+        window.onresize = () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        };
+    };
+</script>
+
+</body>
+</html>
