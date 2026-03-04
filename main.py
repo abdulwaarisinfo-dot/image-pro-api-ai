@@ -34,9 +34,17 @@ logger = logging.getLogger("ImageAI_Pro")
 # CONFIG
 # =========================================================
 MONGO_URI = os.getenv("MONGO_URI", "").strip()  # MongoDB Atlas URI (mongodb+srv://...)
-JWT_SECRET = os.getenv("JWT_SECRET_KEY", "super-secret-key")
-CLIPDROP_API_KEY = os.getenv("CLIPDROP_API_KEY", "")
-OPENAI_API_KEY = os.getenv("OPEN_API_KEY", "")  # Consistent with your env name
+
+JWT_SECRET = os.getenv("JWT_SECRET_KEY")
+if not JWT_SECRET:
+    raise ValueError("JWT_SECRET_KEY is not set")
+
+CLIPDROP_API_KEY = os.getenv("CLIPDROP_API_KEY")
+
+OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
+if not OPENAI_API_KEY:
+    raise ValueError("OPENAI_API_KEY is not set")
+
 ALGORITHM = "HS256"
 
 # =========================================================
