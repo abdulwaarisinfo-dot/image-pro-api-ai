@@ -1,134 +1,488 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PIXUP8K | Professional Neural Upscaling & Text-to-Image</title>
+    <title>PIXUP8K | AI Upscaling & Image Generation</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Serif+Display&display=swap" rel="stylesheet">
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
         :root {
-            --accent: #10b981;
-            --accent-glow: rgba(16, 185, 129, 0.3);
-            --bg-deep: #050505;
-            --panel: rgba(15, 15, 15, 0.8);
-            --border: rgba(255, 255, 255, 0.06);
+            --blue-50:  #f0f8ff;
+            --blue-100: #dbeeff;
+            --blue-200: #bfddff;
+            --blue-300: #93c5fd;
+            --blue-400: #60a5fa;
+            --blue-500: #add8e6;
+            --blue-600: #7ec8e3;
+            --blue-700: #5ba8d0;
+            --accent:   #4fa3c8;
+            --accent-dark: #2d7fa8;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #94a3b8;
+            --border: #e2ecf5;
+            --card-bg: #ffffff;
+            --surface: #f8fbff;
         }
 
+        * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+        
         body {
-            font-family: 'Inter', sans-serif;
-            background-color: var(--bg-deep);
-            color: #e5e7eb;
+            font-family: 'DM Sans', sans-serif;
+            background: #ffffff;
+            color: var(--text-primary);
+            margin: 0;
+            overflow: hidden;
             height: 100vh;
             height: -webkit-fill-available;
-            overflow: hidden;
             display: flex;
             flex-direction: column;
         }
 
-        html {
-            height: -webkit-fill-available;
-        }
+        html { height: -webkit-fill-available; }
 
-        /* Smooth Scroll & Transitions */
-        * { transition: all 0.2s ease-out; -webkit-tap-highlight-color: transparent; }
+        /* Transitions */
+        * { transition: background 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease, color 0.15s ease; }
+
+        /* Scrollbar */
         .custom-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
+        .custom-scroll::-webkit-scrollbar-track { background: transparent; }
+        .custom-scroll::-webkit-scrollbar-thumb { background: var(--blue-200); border-radius: 10px; }
 
+        /* Canvas */
         #canvas-container {
-            position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            z-index: 0; pointer-events: none;
-            opacity: 0.2;
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            z-index: 0; pointer-events: none; opacity: 0.06;
         }
 
-        .glass-panel {
-            background: var(--panel);
+        /* ===================== ANIMATIONS ===================== */
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(16px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to   { opacity: 1; }
+        }
+        @keyframes slideDown {
+            from { opacity: 0; transform: translateY(-8px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        .animate-premium { animation: fadeUp 0.5s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+        .animate-fade    { animation: fadeIn 0.3s ease forwards; }
+        .delay-1 { animation-delay: 0.1s; opacity: 0; }
+        .delay-2 { animation-delay: 0.2s; opacity: 0; }
+        .delay-3 { animation-delay: 0.3s; opacity: 0; }
+        .delay-4 { animation-delay: 0.4s; opacity: 0; }
+
+        /* ===================== BUTTONS ===================== */
+        .btn-primary {
+            display: inline-flex; align-items: center; justify-content: center;
+            padding: 12px 28px;
+            background: var(--accent);
+            color: #fff;
+            font-weight: 600; font-size: 13px; letter-spacing: 0.01em;
+            border-radius: 100px; border: none; cursor: pointer;
+            box-shadow: 0 2px 12px rgba(79,163,200,0.25);
+        }
+        .btn-primary:hover:not(:disabled) {
+            background: var(--accent-dark);
+            box-shadow: 0 4px 20px rgba(79,163,200,0.35);
+            transform: translateY(-1px);
+        }
+        .btn-primary:active { transform: scale(0.97); }
+        .btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
+
+        .btn-ghost {
+            display: inline-flex; align-items: center; justify-content: center;
+            padding: 12px 28px;
+            background: transparent;
+            color: var(--text-secondary);
+            font-weight: 500; font-size: 13px;
+            border-radius: 100px; border: 1.5px solid var(--border); cursor: pointer;
+        }
+        .btn-ghost:hover { background: var(--blue-50); border-color: var(--blue-300); color: var(--accent); }
+
+        .btn-icon {
+            width: 40px; height: 40px;
+            display: flex; align-items: center; justify-content: center;
+            background: var(--surface); border: 1.5px solid var(--border);
+            border-radius: 12px; cursor: pointer; color: var(--text-secondary);
+        }
+        .btn-icon:hover { background: var(--blue-50); border-color: var(--blue-300); color: var(--accent); }
+
+        /* ===================== NAV ===================== */
+        .nav-bar {
+            position: sticky; top: 0; z-index: 50;
+            background: rgba(255,255,255,0.92);
             backdrop-filter: blur(20px);
             -webkit-backdrop-filter: blur(20px);
-            border: 1px solid var(--border);
+            border-bottom: 1px solid var(--border);
         }
 
-        .btn-premium {
-            background: white;
-            color: black;
-            font-weight: 600;
-            border-radius: 12px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            transition: transform 0.2s, box-shadow 0.2s;
+        .nav-logo { display: flex; align-items: center; gap: 8px; }
+        .nav-logo-mark {
+            width: 30px; height: 30px;
+            background: linear-gradient(135deg, var(--accent) 0%, var(--blue-700) 100%);
+            border-radius: 9px;
+            display: flex; align-items: center; justify-content: center;
+        }
+        .nav-logo-mark svg { width: 16px; height: 16px; fill: white; }
+
+        /* ===================== HERO ===================== */
+        #welcome-screen {
+            position: fixed; inset: 0; z-index: 100;
+            background: #ffffff;
+            overflow-y: auto;
+            display: flex; flex-direction: column; align-items: center;
         }
 
-        .btn-premium:active { transform: scale(0.96); }
-        
-        .btn-premium:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 30px -10px white;
+        .hero-badge {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 5px 14px; border-radius: 100px;
+            background: var(--blue-50); border: 1px solid var(--blue-200);
+            color: var(--accent-dark); font-size: 11px; font-weight: 600; letter-spacing: 0.04em;
+        }
+        .hero-badge span.dot {
+            width: 6px; height: 6px; background: var(--accent);
+            border-radius: 50%; display: inline-block;
         }
 
-        /* Comparison Slider */
+        .hero-title {
+            font-family: 'DM Serif Display', serif;
+            font-size: clamp(2.4rem, 6vw, 5rem);
+            line-height: 1.1; letter-spacing: -0.02em;
+            color: var(--text-primary);
+        }
+        .hero-title .highlight { color: var(--accent-dark); }
+
+        /* ===================== COMPARISON SLIDER ===================== */
         .comparison-slider {
-            position: relative;
-            width: 100%;
-            max-width: 800px;
-            height: 250px;
-            overflow: hidden;
-            border-radius: 20px;
+            position: relative; width: 100%; max-width: 780px;
+            height: 240px; overflow: hidden;
+            border-radius: 20px; touch-action: pan-y;
             border: 1px solid var(--border);
-            touch-action: pan-y;
+            box-shadow: 0 8px 40px rgba(0,0,0,0.08);
         }
-        @media (min-width: 768px) { .comparison-slider { height: 450px; border-radius: 24px; } }
+        @media (min-width: 768px) { .comparison-slider { height: 420px; border-radius: 24px; } }
 
         .comparison-img {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            object-fit: cover;
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%; object-fit: cover;
         }
         .comparison-after {
-            width: 50%;
-            z-index: 1;
-            border-right: 2px solid white;
+            width: 50%; z-index: 1; border-right: 2px solid white;
+            overflow: hidden;
         }
         .comparison-handle {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 2;
-            width: 40px; height: 40px;
-            background: white;
-            border-radius: 50%;
+            position: absolute; top: 50%; left: 50%;
+            transform: translate(-50%, -50%); z-index: 2;
+            width: 38px; height: 38px;
+            background: white; border-radius: 50%;
             display: flex; align-items: center; justify-content: center;
-            color: black; font-size: 12px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
-            cursor: ew-resize;
+            color: var(--accent); font-size: 11px;
+            box-shadow: 0 2px 16px rgba(0,0,0,0.15);
+            cursor: ew-resize; border: 1.5px solid var(--border);
         }
 
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-premium { animation: fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
-        
-        .app-container {
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-            width: 100%;
-            position: relative;
-            z-index: 10;
+        .slider-label {
+            position: absolute; z-index: 10;
+            bottom: 12px; padding: 4px 10px; border-radius: 8px;
+            font-size: 9px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase;
+        }
+        .slider-label.left  { left: 12px; background: rgba(255,255,255,0.9); color: var(--text-secondary); }
+        .slider-label.right { right: 12px; background: var(--accent); color: white; }
+
+        /* ===================== FEATURE CARDS ===================== */
+        .feature-card {
+            background: var(--card-bg); border: 1px solid var(--border);
+            border-radius: 20px; padding: 24px;
+            box-shadow: 0 2px 16px rgba(0,0,0,0.04);
+        }
+        .feature-card:hover { box-shadow: 0 6px 28px rgba(79,163,200,0.12); border-color: var(--blue-200); }
+
+        .feature-icon {
+            width: 40px; height: 40px; border-radius: 12px;
+            background: var(--blue-50); border: 1px solid var(--blue-100);
+            display: flex; align-items: center; justify-content: center;
+            color: var(--accent); font-size: 16px; margin-bottom: 14px;
         }
 
-        /* Mobile Responsive Sidebar Fixes */
-        .sidebar-responsive {
+        /* ===================== PRICING ===================== */
+        #pricing-screen {
+            display: none; position: fixed; inset: 0; z-index: 120;
+            background: rgba(255,255,255,0.96);
+            backdrop-filter: blur(24px); -webkit-backdrop-filter: blur(24px);
+            align-items: center; justify-content: center;
+            padding: 20px; overflow-y: auto;
+        }
+        #pricing-screen.active { display: flex; }
+
+        .pricing-card {
+            background: var(--card-bg); border: 1.5px solid var(--border);
+            border-radius: 24px; padding: 32px;
+            display: flex; flex-direction: column;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+        }
+        .pricing-card.featured {
+            border-color: var(--accent); background: var(--blue-50);
+            box-shadow: 0 8px 36px rgba(79,163,200,0.2);
+        }
+        .pricing-card .plan-label {
+            font-size: 10px; font-weight: 700; letter-spacing: 0.1em;
+            text-transform: uppercase; margin-bottom: 8px;
+        }
+        .pricing-card.featured .plan-label { color: var(--accent); }
+        .pricing-card:not(.featured) .plan-label { color: var(--text-muted); }
+
+        .pricing-price {
+            font-family: 'DM Serif Display', serif;
+            font-size: 2.4rem; font-weight: 400; line-height: 1;
+            margin-bottom: 24px; color: var(--text-primary);
+        }
+        .pricing-feature {
+            display: flex; align-items: center; gap: 10px;
+            font-size: 12px; color: var(--text-secondary); padding: 6px 0;
+        }
+        .pricing-feature i { color: var(--accent); font-size: 10px; }
+
+        /* ===================== LOGIN ===================== */
+        #login-view {
+            display: none; position: fixed; inset: 0; z-index: 130;
+            background: rgba(248,251,255,0.85);
+            backdrop-filter: blur(32px); -webkit-backdrop-filter: blur(32px);
+            align-items: center; justify-content: center; padding: 20px;
+        }
+        #login-view.active { display: flex; }
+
+        .auth-card {
+            background: white; border: 1px solid var(--border);
+            border-radius: 28px; padding: 40px;
+            width: 100%; max-width: 400px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.1), 0 0 0 1px var(--border);
+            animation: fadeUp 0.35s cubic-bezier(0.22,1,0.36,1);
+        }
+
+        .auth-field {
             width: 100%;
-            max-height: 220px;
+            padding: 13px 18px;
+            background: var(--surface);
+            border: 1.5px solid var(--border);
+            border-radius: 14px;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 14px; color: var(--text-primary);
+            outline: none;
+        }
+        .auth-field:focus {
+            border-color: var(--accent);
+            background: white;
+            box-shadow: 0 0 0 3px rgba(79,163,200,0.12);
+        }
+        .auth-field::placeholder { color: var(--text-muted); }
+
+        /* ===================== APP DASHBOARD ===================== */
+        #app-view {
+            display: none; flex-direction: column;
+            height: 100%; position: relative; z-index: 10;
+            background: var(--surface);
+        }
+        #app-view.active { display: flex; }
+
+        /* App Header */
+        .app-header {
+            height: 60px; background: white;
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: space-between;
+            padding: 0 20px; flex-shrink: 0;
+        }
+        @media (min-width: 768px) { .app-header { padding: 0 32px; height: 64px; } }
+
+        .app-nav-link {
+            font-size: 12px; font-weight: 600; letter-spacing: 0.02em;
+            padding: 6px 14px; border-radius: 100px; color: var(--text-muted);
+            cursor: pointer; border: none; background: none;
+        }
+        .app-nav-link.active, .app-nav-link:hover { background: var(--blue-50); color: var(--accent-dark); }
+        .app-nav-link.active { color: var(--accent-dark); }
+
+        /* Sidebar */
+        .app-sidebar {
+            width: 100%; border-bottom: 1px solid var(--border);
+            padding: 16px; background: white;
+            overflow-x: auto; flex-shrink: 0;
         }
         @media (min-width: 768px) {
-            .sidebar-responsive {
-                width: 18rem; /* 72px equivalent */
-                max-height: none;
+            .app-sidebar {
+                width: 240px; border-bottom: none; border-right: 1px solid var(--border);
+                padding: 24px; overflow-x: visible; overflow-y: auto;
             }
+        }
+
+        .sidebar-inner { display: flex; gap: 12px; }
+        @media (min-width: 768px) { .sidebar-inner { flex-direction: column; gap: 20px; } }
+
+        .stat-card {
+            background: var(--surface); border: 1px solid var(--border);
+            border-radius: 16px; padding: 16px; min-width: 140px; flex: 1;
+        }
+        @media (min-width: 768px) { .stat-card { min-width: auto; } }
+
+        .stat-label { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--text-muted); margin-bottom: 6px; }
+        .stat-value { font-size: 24px; font-weight: 700; color: var(--text-primary); line-height: 1; }
+
+        .progress-track { height: 4px; background: var(--blue-100); border-radius: 100px; overflow: hidden; margin-top: 10px; }
+        .progress-fill  { height: 100%; background: linear-gradient(90deg, var(--accent) 0%, var(--blue-700) 100%); border-radius: 100px; }
+
+        .sidebar-action {
+            width: 100%; padding: 12px 16px;
+            background: var(--blue-50); border: 1.5px solid var(--blue-200);
+            border-radius: 14px; color: var(--accent-dark);
+            font-size: 12px; font-weight: 600;
+            display: flex; align-items: center; gap: 8px; cursor: pointer;
+            min-width: 140px; flex: 1;
+        }
+        .sidebar-action:hover { background: var(--blue-100); border-color: var(--accent); }
+        @media (min-width: 768px) { .sidebar-action { min-width: auto; flex: none; } }
+
+        /* Main Content */
+        .app-main { flex: 1; display: flex; flex-direction: column; overflow: hidden; }
+        @media (min-width: 768px) { .app-main { flex-direction: row; } }
+
+        .content-area {
+            flex: 1; display: flex; flex-direction: column;
+            padding: 16px; overflow: hidden; background: var(--surface);
+        }
+        @media (min-width: 768px) { .content-area { padding: 28px; } }
+
+        /* Empty state */
+        .empty-state {
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            height: 100%; text-align: center; opacity: 0.5;
+        }
+        .empty-icon {
+            width: 56px; height: 56px; border-radius: 18px;
+            background: white; border: 2px dashed var(--blue-200);
+            display: flex; align-items: center; justify-content: center;
+            color: var(--blue-300); font-size: 20px; margin-bottom: 14px;
+        }
+
+        /* Processing card */
+        .process-card {
+            background: white; border: 1px solid var(--border);
+            border-radius: 24px; overflow: hidden; padding: 24px;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.06);
+            margin-bottom: 20px;
+        }
+
+        .process-progress-track { height: 3px; background: var(--blue-100); border-radius: 100px; overflow: hidden; }
+        .process-progress-fill  { height: 100%; background: linear-gradient(90deg, var(--accent) 0%, var(--blue-700) 100%); border-radius: 100px; width: 0; }
+
+        .img-slot {
+            aspect-ratio: 1/1; background: var(--surface);
+            border-radius: 16px; overflow: hidden;
+            border: 1px solid var(--border);
+            position: relative;
+        }
+
+        /* Upload bar */
+        .upload-bar {
+            background: white; border: 1px solid var(--border);
+            border-radius: 100px; padding: 6px;
+            display: flex; align-items: center; gap: 10px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+        }
+
+        .upload-btn {
+            width: 44px; height: 44px; flex-shrink: 0;
+            background: var(--accent); color: white;
+            border-radius: 100px; display: flex; align-items: center; justify-content: center;
+            cursor: pointer; font-size: 14px;
+        }
+        .upload-btn:hover { background: var(--accent-dark); }
+
+        .upload-status {
+            flex: 1; background: none; border: none; outline: none;
+            font-family: 'DM Sans', sans-serif;
+            font-size: 13px; color: var(--text-muted); min-width: 0;
+        }
+
+        .process-btn {
+            padding: 11px 22px; flex-shrink: 0;
+            background: var(--accent); color: white;
+            border: none; border-radius: 100px; cursor: pointer;
+            font-size: 12px; font-weight: 700; letter-spacing: 0.04em;
+        }
+        .process-btn:hover:not(:disabled) { background: var(--accent-dark); }
+        .process-btn:disabled { opacity: 0.3; cursor: not-allowed; }
+
+        .file-preview-bar {
+            background: var(--blue-50); border: 1px solid var(--blue-100);
+            border-radius: 16px; padding: 10px 14px;
+            display: flex; align-items: center; justify-content: space-between;
+            margin-bottom: 10px; animation: fadeUp 0.25s ease;
+        }
+
+        .preview-thumb {
+            width: 38px; height: 38px; border-radius: 10px;
+            object-fit: cover; border: 1px solid var(--border); flex-shrink: 0;
+        }
+
+        .dismiss-btn {
+            width: 30px; height: 30px; border-radius: 50%;
+            background: white; border: 1px solid var(--border);
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; color: var(--text-muted); font-size: 11px; flex-shrink: 0;
+        }
+        .dismiss-btn:hover { background: #fee2e2; border-color: #fca5a5; color: #ef4444; }
+
+        /* ===================== T2I DEMO ===================== */
+        .t2i-demo {
+            background: white; border: 1px solid var(--border);
+            border-radius: 20px; padding: 24px;
+            box-shadow: 0 2px 16px rgba(0,0,0,0.04);
+        }
+        .t2i-input {
+            width: 100%; padding: 12px 18px;
+            background: var(--surface); border: 1.5px solid var(--border);
+            border-radius: 14px; font-family: 'DM Sans', sans-serif;
+            font-size: 13px; color: var(--text-primary); outline: none;
+            resize: none;
+        }
+        .t2i-input:focus { border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,163,200,0.1); }
+
+        .t2i-placeholder-grid {
+            display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin-top: 14px;
+        }
+        .t2i-placeholder-img {
+            aspect-ratio: 1/1; border-radius: 12px; overflow: hidden;
+            background: var(--surface); border: 1px solid var(--border);
+        }
+        .t2i-placeholder-img img { width: 100%; height: 100%; object-fit: cover; filter: saturate(0.6); opacity: 0.8; }
+
+        /* ===================== LOADER ===================== */
+        .spinner {
+            width: 28px; height: 28px;
+            border: 2px solid var(--blue-100);
+            border-top-color: var(--accent);
+            border-radius: 50%;
+            animation: spin 0.7s linear infinite;
+        }
+
+        /* Section divider */
+        .section-divider {
+            display: flex; align-items: center; gap: 16px; margin: 48px 0 32px;
+        }
+        .section-divider hr { flex: 1; border: none; height: 1px; background: var(--border); }
+        .section-divider span { font-size: 11px; font-weight: 700; letter-spacing: 0.1em; text-transform: uppercase; color: var(--text-muted); white-space: nowrap; }
+
+        /* ===================== MOBILE STACK ===================== */
+        @media (max-width: 767px) {
+            .hero-title { font-size: 2.2rem; }
+            .auth-card { padding: 28px 22px; }
         }
     </style>
 </head>
@@ -136,211 +490,293 @@
 
 <div id="canvas-container"></div>
 
-<!-- Front Landing Page -->
-<div id="welcome-screen" class="fixed inset-0 z-[100] overflow-y-auto bg-black flex flex-col items-center custom-scroll">
-    <nav class="w-full max-w-7xl px-6 h-20 flex items-center justify-between shrink-0">
-        <div class="flex items-center gap-2">
-            <div class="w-6 h-6 md:w-7 md:h-7 bg-emerald-500 rounded-lg"></div>
-            <span class="text-base md:text-xl font-bold tracking-tighter">PIXUP8K</span>
-        </div>
-        <div class="flex gap-2 md:gap-4">
-            <button onclick="showLogin()" class="px-3 py-1.5 text-xs md:text-sm font-medium hover:text-emerald-400">Sign In</button>
-            <button onclick="showLogin()" class="px-4 py-2 bg-white text-black text-xs md:text-sm font-bold rounded-full">Get Started</button>
+<!-- ======================== LANDING PAGE ======================== -->
+<div id="welcome-screen" class="custom-scroll">
+
+    <!-- NAV -->
+    <nav class="nav-bar w-full">
+        <div style="max-width:1100px; margin:0 auto; padding:0 24px; height:68px; display:flex; align-items:center; justify-content:space-between;">
+            <div class="nav-logo">
+                <div class="nav-logo-mark">
+                    <svg viewBox="0 0 16 16"><path d="M8 1L3 5.5V10l5 4.5 5-4.5V5.5L8 1z"/></svg>
+                </div>
+                <span style="font-weight:700; font-size:15px; letter-spacing:-0.02em; color:var(--text-primary);">PIXUP8K</span>
+            </div>
+            <div style="display:flex; align-items:center; gap:10px;">
+                <button onclick="showLogin()" class="btn-ghost" style="padding:9px 20px; font-size:13px;">Sign In</button>
+                <button onclick="showLogin()" class="btn-primary" style="padding:9px 22px;">Get Started</button>
+            </div>
         </div>
     </nav>
 
-    <div class="max-w-5xl w-full px-6 py-8 md:py-12 text-center">
+    <!-- HERO -->
+    <div style="max-width:1100px; width:100%; padding:60px 24px 40px; text-align:center;">
         <div class="animate-premium">
-            <h1 class="text-3xl md:text-7xl font-bold tracking-tight mb-4 md:mb-6 leading-tight">
-                Cinematic <span class="text-emerald-500">8K Quality</span><br class="hidden md:block">
-                & <span class="text-emerald-500">AI Generation</span>
+            <div style="display:flex; justify-content:center; margin-bottom:22px;">
+                <div class="hero-badge"><span class="dot"></span> AI-Powered Neural Reconstruction</div>
+            </div>
+            <h1 class="hero-title" style="margin-bottom:20px;">
+                Transform Images into<br><span class="highlight">8K Masterworks</span>
             </h1>
-            <p class="text-zinc-400 text-sm md:text-xl max-w-2xl mx-auto mb-8 leading-relaxed">
-                The world's most advanced neural reconstruction engine. 
-                <span class="text-white font-medium">Upscale assets</span> or <span class="text-white font-medium">Generate from text</span>.
+            <p style="font-size:clamp(14px,2vw,18px); color:var(--text-secondary); max-width:560px; margin:0 auto 36px; line-height:1.7;">
+                Advanced neural upscaling and text-to-image generation — professional quality, delivered instantly.
             </p>
-            
-            <div class="mb-8 relative group" id="how-it-works">
-                <div class="comparison-slider mx-auto">
-                    <img src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1200&auto=format&fit=crop" class="comparison-img blur-sm opacity-60">
-                    <div class="comparison-after comparison-img overflow-hidden" id="slider-box">
-                        <img src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1200&auto=format&fit=crop" class="comparison-img" style="width: 800px; max-width: none;">
+        </div>
+
+        <!-- SECTION: UPSCALING DEMO -->
+        <div class="animate-premium delay-1">
+            <div class="section-divider">
+                <hr><span>AI Upscaling Demo</span><hr>
+            </div>
+            <p style="font-size:13px; color:var(--text-muted); margin-bottom:20px;">Drag the slider to compare original vs. 8K output</p>
+            <div class="comparison-slider mx-auto" id="how-it-works" style="margin:0 auto;">
+                <img src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1200&auto=format&fit=crop" class="comparison-img" style="filter:blur(2px); opacity:0.7;">
+                <div class="comparison-after comparison-img" id="slider-box">
+                    <img src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1200&auto=format&fit=crop" class="comparison-img" style="width:800px; max-width:none;">
+                </div>
+                <div class="comparison-handle" id="slider-handle"><i class="fas fa-arrows-left-right"></i></div>
+                <div class="slider-label left">Original</div>
+                <div class="slider-label right">8K Output</div>
+            </div>
+        </div>
+
+        <!-- SECTION: TEXT-TO-IMAGE DEMO -->
+        <div class="animate-premium delay-2">
+            <div class="section-divider">
+                <hr><span>Text-to-Image Preview</span><hr>
+            </div>
+            <div style="max-width:680px; margin:0 auto;">
+                <div class="t2i-demo">
+                    <div style="display:flex; align-items:center; gap:10px; margin-bottom:16px;">
+                        <div style="width:32px; height:32px; background:var(--blue-50); border:1px solid var(--blue-100); border-radius:10px; display:flex; align-items:center; justify-content:center; color:var(--accent); flex-shrink:0;">
+                            <i class="fas fa-magic" style="font-size:13px;"></i>
+                        </div>
+                        <div>
+                            <p style="font-size:13px; font-weight:600; color:var(--text-primary); margin:0;">AI Image Generation</p>
+                            <p style="font-size:11px; color:var(--text-muted); margin:0;">Describe your vision, get a masterpiece</p>
+                        </div>
                     </div>
-                    <div class="comparison-handle" id="slider-handle"><i class="fas fa-arrows-left-right"></i></div>
-                    <div class="absolute bottom-2 left-2 md:bottom-4 md:left-4 z-10 text-[8px] md:text-[10px] font-bold tracking-widest uppercase bg-black/50 px-2 py-1 rounded">Source</div>
-                    <div class="absolute bottom-2 right-2 md:bottom-4 md:right-4 z-10 text-[8px] md:text-[10px] font-bold tracking-widest uppercase bg-emerald-500 text-black px-2 py-1 rounded shadow-lg">8K Output</div>
+                    <textarea class="t2i-input" rows="2" placeholder="A serene mountain lake at sunset, ultra-realistic, 8K quality…" disabled style="margin-bottom:12px;"></textarea>
+                    <button onclick="showLogin()" class="btn-primary" style="width:100%; padding:12px;">
+                        <i class="fas fa-bolt" style="margin-right:8px;"></i>Generate Image
+                    </button>
+                    <div class="t2i-placeholder-grid">
+                        <div class="t2i-placeholder-img"><img src="https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=300&h=300&fit=crop" alt=""></div>
+                        <div class="t2i-placeholder-img"><img src="https://images.unsplash.com/photo-1470770841072-f978cf4d019e?w=300&h=300&fit=crop" alt=""></div>
+                        <div class="t2i-placeholder-img"><img src="https://images.unsplash.com/photo-1444723121867-7a241cacace9?w=300&h=300&fit=crop" alt=""></div>
+                    </div>
+                    <p style="font-size:10px; color:var(--text-muted); text-align:center; margin-top:12px;">Sign in to generate real images with your account</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- FEATURE CARDS -->
+        <div class="animate-premium delay-3">
+            <div class="section-divider">
+                <hr><span>Capabilities</span><hr>
+            </div>
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:16px; margin-bottom:48px;">
+                <div class="feature-card" style="text-align:left;">
+                    <div class="feature-icon"><i class="fas fa-expand"></i></div>
+                    <h3 style="font-size:15px; font-weight:600; margin:0 0 6px; color:var(--text-primary);">Ultra-HD Upscaling</h3>
+                    <p style="font-size:13px; color:var(--text-secondary); margin:0; line-height:1.6;">Reconstruct low-res images into stunning 8K masterworks with neural precision.</p>
+                </div>
+                <div class="feature-card" style="text-align:left;">
+                    <div class="feature-icon"><i class="fas fa-magic"></i></div>
+                    <h3 style="font-size:15px; font-weight:600; margin:0 0 6px; color:var(--text-primary);">Text to Image</h3>
+                    <p style="font-size:13px; color:var(--text-secondary); margin:0; line-height:1.6;">High-fidelity art generated from your prompts — photorealistic and artistic styles.</p>
+                </div>
+                <div class="feature-card" style="text-align:left;">
+                    <div class="feature-icon"><i class="fas fa-bolt"></i></div>
+                    <h3 style="font-size:15px; font-weight:600; margin:0 0 6px; color:var(--text-primary);">Instant Processing</h3>
+                    <p style="font-size:13px; color:var(--text-secondary); margin:0; line-height:1.6;">Neural engine processes in seconds — download ready assets in moments.</p>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10 max-w-3xl mx-auto">
-                <div class="p-5 md:p-6 glass-panel rounded-2xl text-left">
-                    <i class="fas fa-expand text-emerald-500 mb-3 block"></i>
-                    <h3 class="font-bold text-white text-sm md:text-base mb-1">Ultra-HD Upscaling</h3>
-                    <p class="text-zinc-500 text-xs">Reconstruct low-res images into 8K masterworks.</p>
-                </div>
-                <div class="p-5 md:p-6 glass-panel rounded-2xl text-left">
-                    <i class="fas fa-magic text-emerald-500 mb-3 block"></i>
-                    <h3 class="font-bold text-white text-sm md:text-base mb-1">Text to Image</h3>
-                    <p class="text-zinc-500 text-xs">High-fidelity art generated from your prompts.</p>
-                </div>
-            </div>
-
-            <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                <button onclick="showLogin()" class="btn-premium w-full sm:w-auto px-10 py-4 text-xs uppercase tracking-widest">Start Processing</button>
-                <button onclick="togglePricing(true)" class="w-full sm:w-auto px-10 py-4 border border-zinc-800 hover:bg-zinc-900 rounded-xl text-xs font-bold">View Pricing</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Pricing Modal -->
-<div id="pricing-screen" class="hidden fixed inset-0 z-[120] flex items-center justify-center bg-black/95 backdrop-blur-xl p-4 md:p-6 overflow-y-auto custom-scroll">
-    <div class="max-w-6xl w-full py-10 animate-premium">
-        <div class="text-center mb-10">
-            <h2 class="text-2xl md:text-4xl font-bold mb-3">Precision Plans</h2>
-            <p class="text-zinc-500 text-xs md:text-sm">Unlock full neural capacity for high-scale workflows.</p>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <!-- Solo -->
-            <div class="glass-panel p-6 md:p-10 rounded-[32px] flex flex-col">
-                <h4 class="text-zinc-500 text-[10px] font-bold uppercase tracking-widest mb-2">Solo</h4>
-                <div class="text-3xl md:text-5xl font-bold mb-6">1299pkr</div>
-                <ul class="text-xs text-zinc-400 space-y-3 mb-8 flex-1">
-                    <li class="flex items-center gap-3"><i class="fas fa-check text-emerald-500"></i> 20 Upscales / Mo</li>
-                    <li class="flex items-center gap-3"><i class="fas fa-check text-emerald-500"></i> 8K Resolution</li>
-                     <li class="flex items-center gap-3"><i class="fas fa-check text-emerald-500"></i> 35 Text to image / Mo</li>
-                </ul>
-                <button onclick="openWhatsApp('Solo')" class="w-full py-4 rounded-xl border border-white/10 text-[10px] font-bold hover:bg-white hover:text-black uppercase">GET STARTED</button>
-            </div>
-            <!-- Pro -->
-            <div class="glass-panel p-6 md:p-10 rounded-[32px] border-2 border-emerald-500/50 bg-emerald-500/[0.02] flex flex-col">
-                <h4 class="text-emerald-500 text-[10px] font-bold uppercase tracking-widest mb-2">Master</h4>
-                <div class="text-3xl md:text-5xl font-bold mb-6">1999pkr</div>
-                <ul class="text-xs text-zinc-200 space-y-3 mb-8 flex-1">
-                    <li class="flex items-center gap-3"><i class="fas fa-check text-emerald-500"></i> 35 Upscales / Mo</li>
-                    <li class="flex items-center gap-3"><i class="fas fa-check text-emerald-500"></i> 8K Resolution</li>
-                     <li class="flex items-center gap-3"><i class="fas fa-check text-emerald-500"></i> 50 Text to image / Mo</li>
-                </ul>
-                <button onclick="openWhatsApp('Master')" class="btn-premium w-full py-4 uppercase text-[10px]">GO PRO</button>
-            </div>
-            <!-- Enterprise -->
-            <div class="glass-panel p-6 md:p-10 rounded-[32px] flex flex-col">
-                <h4 class="text-zinc-500 text-[10px] font-bold uppercase tracking-widest mb-2">Studio</h4>
-                <div class="text-3xl md:text-5xl font-bold mb-6">2499pkr</div>
-                <ul class="text-xs text-zinc-400 space-y-3 mb-8 flex-1">
-                    <li class="flex items-center gap-3"><i class="fas fa-check text-emerald-500"></i> 50 Upscales / Mo</li>
-                     <li class="flex items-center gap-3"><i class="fas fa-check text-emerald-500"></i> 8K Resolution</li>
-                    <li class="flex items-center gap-3"><i class="fas fa-check text-emerald-500"></i> 70 Text to image / Mo</li>
-                </ul>
-                <button onclick="openWhatsApp('Studio')" class="w-full py-4 rounded-xl border border-white/10 text-[10px] font-bold hover:bg-white hover:text-black uppercase">CONTACT</button>
-            </div>
-        </div>
-        <button onclick="togglePricing(false)" class="mt-10 block mx-auto text-zinc-500 hover:text-white font-bold text-[10px] uppercase tracking-widest">Back to Studio</button>
-    </div>
-</div>
-
-<!-- Login Modal -->
-<div id="login-view" class="hidden fixed inset-0 z-[130] flex items-center justify-center bg-black/90 backdrop-blur-3xl p-4">
-    <div class="w-full max-w-sm glass-panel p-8 md:p-10 rounded-[32px] animate-premium">
-        <div class="text-center mb-8">
-            <h3 class="text-2xl font-bold text-white mb-2">Access Portal</h3>
-            <p class="text-zinc-500 text-xs">Welcome back to the studio.</p>
-        </div>
-        <div class="space-y-4">
-            <input type="email" id="login-email" placeholder="Email" class="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-xl outline-none focus:border-emerald-500/50 text-sm">
-            <input type="password" id="login-password" placeholder="Password" class="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-xl outline-none focus:border-emerald-500/50 text-sm">
-            <div id="login-error" class="hidden text-rose-500 text-[10px] font-bold uppercase tracking-widest text-center">Invalid credentials</div>
-            <button onclick="doLogin()" class="btn-premium w-full py-4 mt-2 bg-emerald-500 hover:bg-emerald-400 text-xs uppercase">SIGN IN</button>
-            <button onclick="hideLogin()" class="w-full py-2 text-zinc-600 text-[10px] font-bold tracking-widest hover:text-zinc-400 uppercase">CANCEL</button>
-        </div>
-    </div>
-</div>
-
-<!-- Main App UI -->
-<main id="app-view" class="hidden app-container bg-[#050505]">
-    <header class="h-16 md:h-20 border-b border-white/5 flex items-center justify-between px-4 md:px-8 bg-black/50 backdrop-blur-md shrink-0">
-        <div class="flex items-center gap-3 md:gap-6">
-            <div class="flex items-center gap-2">
-                <div class="w-5 h-5 bg-emerald-500 rounded-md"></div>
-                <h2 class="font-bold tracking-tighter text-sm md:text-base uppercase">PIXUP8K</h2>
-            </div>
-            <nav class="flex items-center gap-4 md:gap-6 text-[10px] font-bold uppercase tracking-widest text-zinc-500">
-                <a href="#" class="text-white border-b border-emerald-500 pb-1">Upscaling</a>
-                <button onclick="redirectToAppPage()" class="hover:text-emerald-400 transition-colors flex items-center gap-2">
-                    <i class="fas fa-magic text-[10px]"></i> <span class="hidden sm:inline">AI GEN</span><span class="sm:hidden">AI</span>
+            <div style="display:flex; flex-wrap:wrap; gap:12px; justify-content:center; margin-bottom:60px;">
+                <button onclick="showLogin()" class="btn-primary" style="padding:14px 36px; font-size:14px;">
+                    Start Upscaling <i class="fas fa-arrow-right" style="margin-left:8px; font-size:11px;"></i>
                 </button>
-            </nav>
+                <button onclick="togglePricing(true)" class="btn-ghost" style="padding:14px 36px; font-size:14px;">
+                    View Pricing
+                </button>
+            </div>
         </div>
-            <button onclick="logout()" class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-zinc-900 flex items-center justify-center border border-white/10 hover:border-emerald-500">
-                <i class="fas fa-sign-out-alt text-zinc-500 text-xs"></i>
+    </div>
+</div>
+
+<!-- ======================== PRICING MODAL ======================== -->
+<div id="pricing-screen">
+    <div style="max-width:920px; width:100%; padding:20px; animation: fadeUp 0.35s ease;">
+        <div style="text-align:center; margin-bottom:36px;">
+            <h2 style="font-family:'DM Serif Display',serif; font-size:clamp(1.8rem,4vw,2.8rem); color:var(--text-primary); margin:0 0 10px;">Choose Your Plan</h2>
+            <p style="font-size:14px; color:var(--text-muted);">Unlock full neural capacity for your workflow</p>
+        </div>
+        <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(240px, 1fr)); gap:16px;">
+            <!-- Solo -->
+            <div class="pricing-card">
+                <div class="plan-label">Solo</div>
+                <div class="pricing-price">1299<span style="font-size:16px; font-family:'DM Sans',sans-serif; color:var(--text-muted);">pkr</span></div>
+                <div style="flex:1;">
+                    <div class="pricing-feature"><i class="fas fa-check-circle"></i> 20 Upscales / Month</div>
+                    <div class="pricing-feature"><i class="fas fa-check-circle"></i> 8K Resolution Output</div>
+                    <div class="pricing-feature"><i class="fas fa-check-circle"></i> 35 Text-to-Image / Mo</div>
+                </div>
+                <button onclick="openWhatsApp('Solo')" class="btn-ghost" style="width:100%; margin-top:24px; justify-content:center;">Get Started</button>
+            </div>
+            <!-- Master (featured) -->
+            <div class="pricing-card featured">
+                <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom:4px;">
+                    <div class="plan-label">Master</div>
+                    <span style="font-size:9px; font-weight:700; letter-spacing:0.08em; background:var(--accent); color:white; padding:3px 10px; border-radius:100px;">POPULAR</span>
+                </div>
+                <div class="pricing-price">1999<span style="font-size:16px; font-family:'DM Sans',sans-serif; color:var(--text-muted);">pkr</span></div>
+                <div style="flex:1;">
+                    <div class="pricing-feature"><i class="fas fa-check-circle"></i> 35 Upscales / Month</div>
+                    <div class="pricing-feature"><i class="fas fa-check-circle"></i> 8K Resolution Output</div>
+                    <div class="pricing-feature"><i class="fas fa-check-circle"></i> 50 Text-to-Image / Mo</div>
+                </div>
+                <button onclick="openWhatsApp('Master')" class="btn-primary" style="width:100%; margin-top:24px; justify-content:center;">Go Pro</button>
+            </div>
+            <!-- Studio -->
+            <div class="pricing-card">
+                <div class="plan-label">Studio</div>
+                <div class="pricing-price">2499<span style="font-size:16px; font-family:'DM Sans',sans-serif; color:var(--text-muted);">pkr</span></div>
+                <div style="flex:1;">
+                    <div class="pricing-feature"><i class="fas fa-check-circle"></i> 50 Upscales / Month</div>
+                    <div class="pricing-feature"><i class="fas fa-check-circle"></i> 8K Resolution Output</div>
+                    <div class="pricing-feature"><i class="fas fa-check-circle"></i> 70 Text-to-Image / Mo</div>
+                </div>
+                <button onclick="openWhatsApp('Studio')" class="btn-ghost" style="width:100%; margin-top:24px; justify-content:center;">Contact Us</button>
+            </div>
+        </div>
+        <button onclick="togglePricing(false)" style="display:block; margin:28px auto 0; background:none; border:none; cursor:pointer; font-size:12px; font-weight:600; color:var(--text-muted); letter-spacing:0.04em;">
+            <i class="fas fa-arrow-left" style="margin-right:6px;"></i>Back to Studio
+        </button>
+    </div>
+</div>
+
+<!-- ======================== LOGIN MODAL ======================== -->
+<div id="login-view">
+    <div class="auth-card">
+        <div style="display:flex; align-items:center; gap:10px; margin-bottom:28px;">
+            <div class="nav-logo-mark" style="width:36px; height:36px; border-radius:11px;">
+                <svg viewBox="0 0 16 16" style="width:18px; height:18px; fill:white;"><path d="M8 1L3 5.5V10l5 4.5 5-4.5V5.5L8 1z"/></svg>
+            </div>
+            <div>
+                <p style="font-size:16px; font-weight:700; margin:0; color:var(--text-primary);">Welcome back</p>
+                <p style="font-size:12px; color:var(--text-muted); margin:0;">Sign in to your account</p>
+            </div>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:12px;">
+            <div>
+                <label style="font-size:11px; font-weight:600; color:var(--text-secondary); letter-spacing:0.04em; display:block; margin-bottom:6px;">Email address</label>
+                <input type="email" id="login-email" placeholder="you@example.com" class="auth-field">
+            </div>
+            <div>
+                <label style="font-size:11px; font-weight:600; color:var(--text-secondary); letter-spacing:0.04em; display:block; margin-bottom:6px;">Password</label>
+                <input type="password" id="login-password" placeholder="••••••••" class="auth-field">
+            </div>
+
+            <div id="login-error" style="display:none; background:#fef2f2; border:1px solid #fecaca; border-radius:10px; padding:10px 14px; font-size:12px; color:#dc2626; font-weight:500;">
+                <i class="fas fa-exclamation-circle" style="margin-right:6px;"></i>
+                <span id="login-error-text">Invalid credentials. Please try again.</span>
+            </div>
+
+            <button onclick="doLogin()" class="btn-primary" style="width:100%; padding:14px; justify-content:center; margin-top:4px; font-size:14px;">
+                Sign In
+            </button>
+            <button onclick="hideLogin()" style="background:none; border:none; cursor:pointer; font-size:13px; color:var(--text-muted); padding:8px; text-align:center; font-family:'DM Sans',sans-serif;">
+                Cancel
             </button>
         </div>
+    </div>
+</div>
+
+<!-- ======================== APP DASHBOARD ======================== -->
+<main id="app-view">
+
+    <!-- App Header -->
+    <header class="app-header">
+        <div style="display:flex; align-items:center; gap:16px;">
+            <div class="nav-logo">
+                <div class="nav-logo-mark" style="width:28px; height:28px; border-radius:8px;">
+                    <svg viewBox="0 0 16 16" style="width:14px; height:14px; fill:white;"><path d="M8 1L3 5.5V10l5 4.5 5-4.5V5.5L8 1z"/></svg>
+                </div>
+                <span style="font-weight:700; font-size:13px; letter-spacing:-0.01em; color:var(--text-primary);">PIXUP8K</span>
+            </div>
+            <div style="display:flex; gap:4px; padding-left:8px; border-left:1px solid var(--border);">
+                <button class="app-nav-link active">
+                    <i class="fas fa-expand" style="margin-right:6px; font-size:10px;"></i>Upscaling
+                </button>
+                <button onclick="redirectToAppPage()" class="app-nav-link">
+                    <i class="fas fa-magic" style="margin-right:6px; font-size:10px;"></i>
+                    <span class="hidden sm:inline">AI Generate</span><span class="sm:hidden">AI</span>
+                </button>
+            </div>
+        </div>
+        <button onclick="logout()" class="btn-icon" title="Sign out">
+            <i class="fas fa-sign-out-alt" style="font-size:13px;"></i>
+        </button>
     </header>
 
-    <div class="flex-1 flex flex-col md:flex-row overflow-hidden">
-        <!-- Responsive Sidebar -->
-        <aside class="sidebar-responsive border-b md:border-b-0 md:border-r border-white/5 p-4 md:p-8 space-y-4 md:space-y-6 bg-zinc-950/30 overflow-x-auto md:overflow-y-auto shrink-0 custom-scroll">
-            <div class="flex flex-row md:flex-col gap-4 md:gap-6 w-full">
-                <div class="flex-1 min-w-[140px] md:min-w-0">
-                    <p class="text-[9px] uppercase tracking-widest text-zinc-500 font-bold mb-2 md:mb-3">Balance</p>
-                    <div class="p-3 md:p-4 glass-panel rounded-xl md:rounded-2xl border-white/5">
-                        <div class="flex justify-between items-end mb-2">
-                            <span id="usage-val" class="text-lg md:text-2xl font-bold">--</span>
-                            <span class="text-[8px] font-bold text-zinc-500 mb-0.5 uppercase">Tokens</span>
-                        </div>
-                        <div class="h-1 w-full bg-zinc-900 rounded-full overflow-hidden">
-                            <div id="usage-bar" class="h-full bg-emerald-500" style="width:0%"></div>
-                        </div>
-                        <p id="usage-text" class="text-[7px] md:text-[8px] text-zinc-600 mt-2 font-bold uppercase tracking-widest truncate">Loading...</p>
+    <div class="app-main">
+        <!-- Sidebar -->
+        <aside class="app-sidebar custom-scroll">
+            <div class="sidebar-inner">
+                <!-- Balance stat -->
+                <div class="stat-card">
+                    <div class="stat-label">Tokens Left</div>
+                    <div class="stat-value" id="usage-val">--</div>
+                    <div class="progress-track">
+                        <div class="progress-fill" id="usage-bar" style="width:0%;"></div>
                     </div>
+                    <p id="usage-text" style="font-size:10px; color:var(--text-muted); margin:6px 0 0; font-weight:500; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">Loading...</p>
                 </div>
-
-                <div class="flex-1 md:flex-none space-y-3 md:space-y-4 min-w-[140px] md:min-w-0">
-                    <p class="hidden md:block text-[9px] uppercase tracking-widest text-zinc-500 font-bold">Options</p>
-                    <button onclick="redirectToAppPage()" class="w-full p-3 border border-emerald-500/20 bg-emerald-500/5 rounded-xl flex items-center justify-between text-[9px] font-bold uppercase tracking-widest hover:bg-emerald-500 hover:text-black group transition-all">
-                        <span class="flex items-center gap-2"><i class="fas fa-magic"></i> AI GEN</span>
-                        <i class="fas fa-chevron-right opacity-50 group-hover:opacity-100 hidden md:block"></i>
-                    </button>
-                </div>
+                <!-- AI Gen link -->
+                <button onclick="redirectToAppPage()" class="sidebar-action">
+                    <i class="fas fa-magic" style="font-size:13px;"></i>
+                    <span style="flex:1; text-align:left;">AI Generate</span>
+                    <i class="fas fa-chevron-right" style="font-size:9px; opacity:0.5; display:none;" class="md-show"></i>
+                </button>
             </div>
         </aside>
 
-        <!-- Chat Area -->
-        <section class="flex-1 flex flex-col p-3 md:p-6 bg-[#080808] overflow-hidden">
-            <div id="chat-messages" class="flex-1 overflow-y-auto space-y-6 custom-scroll pb-6 px-1 md:px-4">
-                <div id="empty-state" class="h-full flex flex-col items-center justify-center text-center opacity-30 px-4">
-                    <div class="w-12 h-12 md:w-16 md:h-16 mb-4 bg-zinc-900 rounded-2xl flex items-center justify-center border border-dashed border-zinc-700">
-                        <i class="fas fa-plus text-lg md:text-xl"></i>
-                    </div>
-                    <h3 class="text-xs md:text-base font-bold">Ready for reconstruction</h3>
-                    <p class="text-[10px] md:text-xs">Upload your image to begin 8K processing.</p>
+        <!-- Main Content -->
+        <section class="content-area">
+            <div id="chat-messages" class="flex-1 overflow-y-auto custom-scroll" style="flex:1; overflow-y:auto; padding-bottom:16px;">
+                <div id="empty-state" class="empty-state">
+                    <div class="empty-icon"><i class="fas fa-cloud-upload-alt"></i></div>
+                    <h3 style="font-size:14px; font-weight:600; margin:0 0 6px; color:var(--text-primary);">Ready to upscale</h3>
+                    <p style="font-size:12px; color:var(--text-muted); margin:0;">Upload an image to begin 8K neural processing</p>
                 </div>
             </div>
 
-            <!-- Input Controls -->
-            <div class="max-w-4xl mx-auto w-full pt-4 shrink-0">
-                <div id="file-preview" class="hidden mb-3 p-3 glass-panel rounded-2xl animate-premium flex items-center justify-between border-emerald-500/20">
-                    <div class="flex items-center gap-3 overflow-hidden">
-                        <img id="preview-img" src="" class="w-10 h-10 rounded-lg object-cover border border-white/10 shrink-0">
-                        <div class="overflow-hidden">
-                            <p id="target-name" class="text-[10px] font-bold text-white uppercase tracking-wider truncate"></p>
-                            <p class="text-[8px] text-emerald-500 font-bold uppercase">Source staged</p>
+            <!-- Upload Controls -->
+            <div style="max-width:720px; width:100%; margin:0 auto; flex-shrink:0; padding-top:12px;">
+                <div id="file-preview" style="display:none;" class="file-preview-bar">
+                    <div style="display:flex; align-items:center; gap:12px; overflow:hidden; flex:1; min-width:0;">
+                        <img id="preview-img" src="" class="preview-thumb">
+                        <div style="overflow:hidden; min-width:0;">
+                            <p id="target-name" style="font-size:12px; font-weight:600; color:var(--text-primary); margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;"></p>
+                            <p style="font-size:10px; color:var(--accent); font-weight:600; margin:2px 0 0; letter-spacing:0.04em;">Ready to process</p>
                         </div>
                     </div>
-                    <button onclick="clearFile()" class="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center"><i class="fas fa-times text-xs"></i></button>
+                    <button onclick="clearFile()" class="dismiss-btn"><i class="fas fa-times"></i></button>
                 </div>
 
-                <div class="glass-panel p-1.5 md:p-2 rounded-full border border-white/10 flex items-center gap-2 shadow-2xl">
-                    <label class="w-10 h-10 md:w-14 md:h-14 flex items-center justify-center bg-white text-black rounded-full cursor-pointer hover:scale-95 transition-all shrink-0">
-                        <i class="fas fa-arrow-up text-sm"></i>
-                        <input type="file" id="file-input" class="hidden" accept="image/*" onchange="handleFile(event)">
+                <div class="upload-bar">
+                    <label class="upload-btn">
+                        <i class="fas fa-arrow-up"></i>
+                        <input type="file" id="file-input" style="display:none;" accept="image/*" onchange="handleFile(event)">
                     </label>
-                    <input type="text" id="status-text" readonly placeholder="Select source file..." class="flex-1 bg-transparent px-2 outline-none text-[10px] md:text-xs text-zinc-400 font-medium truncate">
-                    <button id="process-btn" disabled onclick="startProcessing()" class="px-5 md:px-8 py-3 md:py-4 bg-emerald-500 text-black font-bold text-[9px] md:text-[10px] uppercase tracking-widest rounded-full disabled:opacity-20 transition-all shrink-0">
-                        GO <span class="hidden sm:inline">8K</span> <i class="fas fa-bolt ml-1"></i>
+                    <input type="text" id="status-text" readonly placeholder="Select an image to upscale…" class="upload-status">
+                    <button id="process-btn" disabled onclick="startProcessing()" class="process-btn">
+                        Upscale <i class="fas fa-bolt" style="margin-left:4px; font-size:10px;"></i>
                     </button>
                 </div>
-                <p class="text-[8px] text-zinc-600 text-center mt-3 uppercase tracking-widest font-bold">Neural Engine v4.0.1 Stable</p>
+                <p style="font-size:10px; color:var(--text-muted); text-align:center; margin-top:10px; letter-spacing:0.04em; font-weight:500;">Neural Engine v4.0.1 Stable</p>
             </div>
         </section>
     </div>
@@ -361,7 +797,7 @@ function init3D(){
         vertices.push(THREE.MathUtils.randFloatSpread(2500), THREE.MathUtils.randFloatSpread(2500), THREE.MathUtils.randFloatSpread(2500));
     }
     geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-    particles = new THREE.Points(geometry, new THREE.PointsMaterial({color: 0x10b981, size: 1.0, transparent: true, opacity: 0.4}));
+    particles = new THREE.Points(geometry, new THREE.PointsMaterial({color: 0x4fa3c8, size: 1.0, transparent: true, opacity: 0.4}));
     scene.add(particles);
     camera.position.z = 1000;
     function animate(){
@@ -391,9 +827,24 @@ slider.ontouchmove = (e) => updateSlider(e.touches[0].clientX);
 
 let authToken = localStorage.getItem('pro_token'), activeFile = null;
 
-function togglePricing(show) { document.getElementById('pricing-screen').classList.toggle('hidden', !show); }
-function showLogin() { document.getElementById('login-view').classList.remove('hidden'); document.getElementById('login-error').classList.add('hidden'); }
-function hideLogin() { document.getElementById('login-view').classList.add('hidden'); }
+function togglePricing(show) {
+    const el = document.getElementById('pricing-screen');
+    if (show) { el.classList.add('active'); el.style.display = 'flex'; }
+    else { el.classList.remove('active'); el.style.display = 'none'; }
+}
+
+function showLogin() {
+    const el = document.getElementById('login-view');
+    el.style.display = 'flex';
+    el.classList.add('active');
+    document.getElementById('login-error').style.display = 'none';
+}
+
+function hideLogin() {
+    const el = document.getElementById('login-view');
+    el.style.display = 'none';
+    el.classList.remove('active');
+}
 
 function redirectToAppPage() {
     window.location.href = '/app';
@@ -409,10 +860,11 @@ function openWhatsApp(planName) {
 async function doLogin() {
     const email = document.getElementById('login-email').value;
     const password = document.getElementById('login-password').value;
-    const errorMsg = document.getElementById('login-error');
+    const errorEl = document.getElementById('login-error');
+    const errorText = document.getElementById('login-error-text');
     if(!email || !password) {
-        errorMsg.innerText = "Please fill all fields";
-        errorMsg.classList.remove('hidden');
+        errorText.innerText = "Please fill in all fields.";
+        errorEl.style.display = 'block';
         return;
     }
     const formData = new FormData(); 
@@ -426,8 +878,8 @@ async function doLogin() {
             localStorage.setItem('pro_token', authToken); 
             enterApp();
         } else {
-            errorMsg.innerText = "Invalid credentials";
-            errorMsg.classList.remove('hidden');
+            errorText.innerText = "Invalid credentials. Please try again.";
+            errorEl.style.display = 'block';
         }
     } catch(err) {
         enterApp(); 
@@ -436,8 +888,9 @@ async function doLogin() {
 
 async function enterApp() {
     document.getElementById('welcome-screen').classList.add('hidden');
-    document.getElementById('login-view').classList.add('hidden');
-    document.getElementById('app-view').classList.remove('hidden');
+    document.getElementById('login-view').style.display = 'none';
+    document.getElementById('app-view').style.display = 'flex';
+    document.getElementById('app-view').classList.add('active');
     refreshProfile();
 }
 
@@ -459,7 +912,7 @@ function handleFile(e) {
     if(activeFile) {
         document.getElementById('empty-state').classList.add('hidden');
         document.getElementById('target-name').innerText = activeFile.name;
-        document.getElementById('file-preview').classList.remove('hidden');
+        document.getElementById('file-preview').style.display = 'flex';
         document.getElementById('status-text').value = `STAGED: ${activeFile.name}`;
         document.getElementById('preview-img').src = URL.createObjectURL(activeFile);
         document.getElementById('process-btn').disabled = false;
@@ -469,7 +922,7 @@ function handleFile(e) {
 function clearFile() {
     activeFile = null;
     document.getElementById('file-input').value = '';
-    document.getElementById('file-preview').classList.add('hidden');
+    document.getElementById('file-preview').style.display = 'none';
     document.getElementById('status-text').value = '';
     document.getElementById('process-btn').disabled = true;
 }
@@ -479,44 +932,55 @@ async function startProcessing() {
     const container = document.getElementById('chat-messages');
     const bubbleId = 'proc-' + Date.now();
     const wrap = document.createElement('div');
-    wrap.className = 'animate-premium max-w-4xl mx-auto w-full mb-8 px-2 md:px-0';
+    wrap.className = 'animate-premium';
+    wrap.style.cssText = 'max-width:680px; width:100%; margin:0 auto 20px;';
     wrap.innerHTML = `
-        <div class="glass-panel rounded-[24px] md:rounded-[40px] overflow-hidden p-5 md:p-8 border-white/10 bg-zinc-950/40">
-            <div class="flex justify-between items-center mb-6">
-                <div class="flex items-center gap-3">
-                    <span class="text-[9px] font-bold uppercase tracking-widest text-emerald-500">Processing 8K</span>
-                    <span class="text-[8px] font-medium text-zinc-600 truncate max-w-[80px]">#${bubbleId.slice(-6)}</span>
+        <div class="process-card">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:18px;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <div style="width:8px; height:8px; background:var(--accent); border-radius:50%; box-shadow:0 0 8px var(--accent);"></div>
+                    <span style="font-size:11px; font-weight:700; letter-spacing:0.06em; color:var(--accent-dark); text-transform:uppercase;">Processing 8K</span>
+                    <span style="font-size:10px; color:var(--text-muted);">#${bubbleId.slice(-6)}</span>
                 </div>
-                <span id="perc-${bubbleId}" class="text-[10px] font-bold text-white">0%</span>
+                <span id="perc-${bubbleId}" style="font-size:12px; font-weight:700; color:var(--text-primary);">0%</span>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 mb-6">
-                <div class="space-y-2">
-                    <p class="text-[8px] font-bold text-zinc-500 uppercase tracking-widest">Original</p>
-                    <div class="aspect-square bg-zinc-900 rounded-2xl overflow-hidden border border-white/5">
-                        <img src="${URL.createObjectURL(activeFile)}" class="w-full h-full object-cover">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; margin-bottom:18px;">
+                <div>
+                    <p style="font-size:9px; font-weight:700; color:var(--text-muted); letter-spacing:0.08em; text-transform:uppercase; margin:0 0 8px;">Original</p>
+                    <div class="img-slot">
+                        <img src="${URL.createObjectURL(activeFile)}" style="width:100%; height:100%; object-fit:cover;">
                     </div>
                 </div>
-                <div class="space-y-2">
-                    <p class="text-[8px] font-bold text-zinc-500 uppercase tracking-widest">8K Reconstruction</p>
-                    <div class="aspect-square bg-zinc-900 rounded-2xl overflow-hidden border border-white/5 relative">
-                        <img id="result-${bubbleId}" src="" class="w-full h-full object-cover opacity-0 transition-opacity duration-1000">
-                        <div id="loader-${bubbleId}" class="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm">
-                            <div class="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+                <div>
+                    <p style="font-size:9px; font-weight:700; color:var(--text-muted); letter-spacing:0.08em; text-transform:uppercase; margin:0 0 8px;">8K Output</p>
+                    <div class="img-slot">
+                        <img id="result-${bubbleId}" src="" style="width:100%; height:100%; object-fit:cover; opacity:0; transition:opacity 1s ease;">
+                        <div id="loader-${bubbleId}" style="position:absolute; inset:0; display:flex; align-items:center; justify-content:center; background:var(--surface);">
+                            <div class="spinner"></div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <div class="h-1 w-full bg-zinc-900 rounded-full overflow-hidden mb-6">
-                <div id="bar-${bubbleId}" class="h-full bg-emerald-500 w-0 transition-all duration-[4000ms]"></div>
+            <div class="process-progress-track" style="margin-bottom:18px;">
+                <div id="bar-${bubbleId}" class="process-progress-fill" style="transition:width 4000ms cubic-bezier(0.4,0,0.2,1);"></div>
             </div>
-            
-            <div id="actions-${bubbleId}" class="hidden flex flex-col md:flex-row justify-between items-center gap-4 pt-6 border-t border-white/5 animate-premium">
-                <p class="text-[9px] font-medium text-zinc-400 uppercase">Task Successfully Completed</p>
-                <div class="flex gap-4 w-full md:w-auto">
-                    <button onclick="this.closest('.animate-premium').remove()" class="flex-1 md:flex-none text-[10px] font-bold uppercase tracking-widest text-zinc-500">Dismiss</button>
-                    <a id="dl-${bubbleId}" href="#" download class="flex-1 md:flex-none text-center px-6 py-3 rounded-xl bg-white text-black text-[10px] font-bold uppercase tracking-widest">Download</a>
+
+            <div id="actions-${bubbleId}" style="display:none; border-top:1px solid var(--border); padding-top:16px;">
+                <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:12px;">
+                    <div style="display:flex; align-items:center; gap:6px;">
+                        <i class="fas fa-check-circle" style="color:var(--accent); font-size:13px;"></i>
+                        <span style="font-size:11px; color:var(--text-secondary); font-weight:500;">Processing complete</span>
+                    </div>
+                    <div style="display:flex; gap:10px;">
+                        <button onclick="this.closest('.animate-premium').remove()" style="font-size:11px; font-weight:600; color:var(--text-muted); background:none; border:none; cursor:pointer; padding:8px 14px;">Dismiss</button>
+                        <a id="dl-${bubbleId}" href="#" download style="text-decoration:none;">
+                            <button style="padding:9px 20px; background:var(--accent); color:white; border:none; border-radius:100px; font-size:11px; font-weight:700; cursor:pointer; letter-spacing:0.04em;">
+                                <i class="fas fa-download" style="margin-right:6px;"></i>Download
+                            </button>
+                        </a>
+                    </div>
                 </div>
             </div>
         </div>
@@ -551,11 +1015,12 @@ async function startProcessing() {
                 if(resultImg) {
                     resultImg.src = data.download_url;
                     resultImg.classList.replace('opacity-0', 'opacity-100');
+                    resultImg.style.opacity = '1';
                 }
                 const loader = document.getElementById(`loader-${bubbleId}`);
                 if(loader) loader.remove();
                 const actions = document.getElementById(`actions-${bubbleId}`);
-                if(actions) actions.classList.remove('hidden');
+                if(actions) actions.style.display = 'block';
                 const dl = document.getElementById(`dl-${bubbleId}`);
                 if(dl) dl.href = data.download_url;
                 refreshProfile();
@@ -567,17 +1032,18 @@ async function startProcessing() {
             const resultImg = document.getElementById(`result-${bubbleId}`);
             if(resultImg) {
                 resultImg.src = URL.createObjectURL(activeFile);
-                resultImg.classList.replace('opacity-0', 'opacity-100');
+                resultImg.style.opacity = '1';
             }
             const loader = document.getElementById(`loader-${bubbleId}`);
             if(loader) loader.remove();
             const actions = document.getElementById(`actions-${bubbleId}`);
-            if(actions) actions.classList.remove('hidden');
+            if(actions) actions.style.display = 'block';
         }, 4200);
     }
 }
 
 function logout() { localStorage.removeItem('pro_token'); window.location.reload(); }
+
 window.onload = () => { 
     init3D(); 
     if(authToken) enterApp();
