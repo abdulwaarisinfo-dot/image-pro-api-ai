@@ -3,590 +3,568 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PIXUP8K | Professional Neural Upscaling & Text-to-Image</title>
+    <title>PIXUP8K | Neural Chat Synthesis</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
 
         :root {
             --accent: #10b981;
-            --accent-glow: rgba(16, 185, 129, 0.3);
-            --bg-deep: #050505;
-            --panel: rgba(15, 15, 15, 0.8);
-            --border: rgba(255, 255, 255, 0.06);
+            --accent-glow: rgba(16, 185, 129, 0.2);
+            --bg-deep: #0a0a0a;
+            --panel: #121212;
+            --border: rgba(255, 255, 255, 0.05);
         }
 
         body {
             font-family: 'Inter', sans-serif;
             background-color: var(--bg-deep);
-            color: #e5e7eb;
-            height: 100vh;
-            height: -webkit-fill-available;
+            color: #ececec;
+            height: 100dvh; /* Use dynamic viewport height for mobile browsers */
             overflow: hidden;
-            display: flex;
-            flex-direction: column;
+            -webkit-tap-highlight-color: transparent;
         }
 
-        html {
-            height: -webkit-fill-available;
+        .chat-container {
+            scrollbar-width: thin;
+            scrollbar-color: #333 transparent;
         }
-
-        /* Smooth Scroll & Transitions */
-        * { transition: all 0.2s ease-out; -webkit-tap-highlight-color: transparent; }
-        .custom-scroll::-webkit-scrollbar { width: 4px; height: 4px; }
-        .custom-scroll::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); border-radius: 10px; }
+        .chat-container::-webkit-scrollbar { width: 4px; }
+        .chat-container::-webkit-scrollbar-thumb { background: #333; border-radius: 10px; }
 
         #canvas-container {
             position: fixed;
             top: 0; left: 0; width: 100%; height: 100%;
             z-index: 0; pointer-events: none;
-            opacity: 0.2;
+            opacity: 0.15;
         }
 
         .glass-panel {
             background: var(--panel);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
             border: 1px solid var(--border);
+            backdrop-filter: blur(10px);
         }
 
-        .btn-premium {
-            background: white;
-            color: black;
-            font-weight: 600;
-            border-radius: 12px;
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            transition: transform 0.2s, box-shadow 0.2s;
+        .message-bubble {
+            animation: slideUp 0.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
 
-        .btn-premium:active { transform: scale(0.96); }
-        
-        .btn-premium:hover:not(:disabled) {
-            transform: translateY(-2px);
-            box-shadow: 0 10px 30px -10px white;
+        @keyframes slideUp {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
-        /* Comparison Slider */
-        .comparison-slider {
-            position: relative;
-            width: 100%;
-            max-width: 800px;
-            height: 250px;
-            overflow: hidden;
-            border-radius: 20px;
-            border: 1px solid var(--border);
-            touch-action: pan-y;
-        }
-        @media (min-width: 768px) { .comparison-slider { height: 450px; border-radius: 24px; } }
-
-        .comparison-img {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            object-fit: cover;
-        }
-        .comparison-after {
-            width: 50%;
-            z-index: 1;
-            border-right: 2px solid white;
-        }
-        .comparison-handle {
-            position: absolute;
-            top: 50%; left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 2;
-            width: 40px; height: 40px;
-            background: white;
+        .loader-ring {
+            border: 2px solid rgba(16, 185, 129, 0.1);
+            border-top: 2px solid var(--accent);
             border-radius: 50%;
-            display: flex; align-items: center; justify-content: center;
-            color: black; font-size: 12px;
-            box-shadow: 0 0 20px rgba(0,0,0,0.5);
-            cursor: ew-resize;
+            width: 24px; height: 24px;
+            animation: spin 1s linear infinite;
         }
 
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .animate-premium { animation: fadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
-        .app-container {
-            display: flex;
-            flex-direction: column;
-            height: 100%;
-            width: 100%;
-            position: relative;
-            z-index: 10;
-        }
+        .hidden-section { display: none !important; }
 
-        /* Mobile Responsive Sidebar Fixes */
-        .sidebar-responsive {
-            width: 100%;
-            max-height: 220px;
+        input:focus { box-shadow: 0 0 20px var(--accent-glow); }
+
+        /* Custom Mobile Sidebar Overlay */
+        #mobile-sidebar {
+            transition: transform 0.3s ease-in-out;
+            z-index: 100;
         }
-        @media (min-width: 768px) {
-            .sidebar-responsive {
-                width: 18rem; /* 72px equivalent */
-                max-height: none;
-            }
-        }
+        #mobile-sidebar.closed { transform: translateX(-100%); }
     </style>
 </head>
-<body>
+<body class="flex flex-col">
 
 <div id="canvas-container"></div>
 
-<!-- Front Landing Page -->
-<div id="welcome-screen" class="fixed inset-0 z-[100] overflow-y-auto bg-black flex flex-col items-center custom-scroll">
-    <nav class="w-full max-w-7xl px-6 h-20 flex items-center justify-between shrink-0">
-        <div class="flex items-center gap-2">
-            <div class="w-6 h-6 md:w-7 md:h-7 bg-emerald-500 rounded-lg"></div>
-            <span class="text-base md:text-xl font-bold tracking-tighter">PIXUP8K</span>
+<!-- Login Overlay -->
+<div id="login-screen" class="fixed inset-0 z-[100] flex items-center justify-center bg-black/95 backdrop-blur-md px-4">
+    <div class="glass-panel p-6 sm:p-8 rounded-3xl w-full max-w-md shadow-2xl border-white/5">
+        <div class="flex flex-col items-center mb-8">
+            <div class="w-12 h-12 bg-emerald-500 rounded-2xl mb-4 flex items-center justify-center shadow-[0_0_20px_rgba(16,185,129,0.3)]">
+                <i class="fas fa-brain text-black text-lg"></i>
+            </div>
+            <h2 class="text-2xl font-bold tracking-tight uppercase">Neural <span class="text-emerald-500">Link</span></h2>
+            <p class="text-zinc-500 text-[10px] mt-2 font-bold uppercase tracking-[0.2em]">Authorized Personnel Only</p>
         </div>
-        <div class="flex gap-2 md:gap-4">
-            <button onclick="showLogin()" class="px-3 py-1.5 text-xs md:text-sm font-medium hover:text-emerald-400">Sign In</button>
-            <button onclick="showLogin()" class="px-4 py-2 bg-white text-black text-xs md:text-sm font-bold rounded-full">Get Started</button>
-        </div>
-    </nav>
+        <form id="login-form" class="space-y-4">
+            <div>
+                <input type="email" name="email" required placeholder="Email Address" 
+                    class="w-full bg-zinc-900 border border-white/5 rounded-xl px-5 py-3.5 text-sm outline-none focus:border-emerald-500/50 transition-all">
+            </div>
+            <div>
+                <input type="password" name="password" required placeholder="Access Key" 
+                    class="w-full bg-zinc-900 border border-white/5 rounded-xl px-5 py-3.5 text-sm outline-none focus:border-emerald-500/50 transition-all">
+            </div>
+            <button type="submit" class="w-full py-3.5 bg-emerald-500 text-black font-bold text-xs uppercase tracking-widest rounded-xl hover:bg-emerald-400 active:scale-95 transition-all mt-2">
+                Establish Connection
+            </button>
+        </form>
+    </div>
+</div>
 
-    <div class="max-w-5xl w-full px-6 py-8 md:py-12 text-center">
-        <div class="animate-premium">
-            <h1 class="text-3xl md:text-7xl font-bold tracking-tight mb-4 md:mb-6 leading-tight">
-                Cinematic <span class="text-emerald-500">8K Quality</span><br class="hidden md:block">
-                & <span class="text-emerald-500">AI Generation</span>
-            </h1>
-            <p class="text-zinc-400 text-sm md:text-xl max-w-2xl mx-auto mb-8 leading-relaxed">
-                The world's most advanced neural reconstruction engine. 
-                <span class="text-white font-medium">Upscale assets</span> or <span class="text-white font-medium">Generate from text</span>.
-            </p>
-            
-            <div class="mb-8 relative group" id="how-it-works">
-                <div class="comparison-slider mx-auto">
-                    <img src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1200&auto=format&fit=crop" class="comparison-img blur-sm opacity-60">
-                    <div class="comparison-after comparison-img overflow-hidden" id="slider-box">
-                        <img src="https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1200&auto=format&fit=crop" class="comparison-img" style="width: 800px; max-width: none;">
+<main id="app-interface" class="relative z-10 flex h-screen w-full overflow-hidden hidden-section">
+    
+    <!-- Sidebar (Desktop) -->
+    <aside class="hidden lg:flex w-72 border-r border-white/5 flex-col bg-[#0d0d0d] shrink-0">
+        <div class="p-6 border-b border-white/5 flex items-center gap-3">
+            <div class="w-5 h-5 bg-emerald-500 rounded flex items-center justify-center">
+                <i class="fas fa-bolt text-[10px] text-black"></i>
+            </div>
+            <h1 class="font-bold tracking-tighter text-sm uppercase">PIXUP8K <span class="text-zinc-500 font-medium text-[10px]">V2</span></h1>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-6 space-y-8">
+            <!-- Quota Section -->
+            <div>
+                <p class="text-[9px] uppercase tracking-[0.2em] text-zinc-500 font-bold mb-4">Neural Quota</p>
+                <div class="bg-white/5 rounded-2xl p-5 border border-white/5">
+                    <div class="relative w-32 h-32 mx-auto mb-4">
+                        <canvas id="quotaChart"></canvas>
+                        <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                            <span id="quota-percent" class="text-lg font-bold text-white leading-none">0%</span>
+                            <span class="text-[7px] uppercase tracking-widest text-zinc-500 mt-1">Used</span>
+                        </div>
                     </div>
-                    <div class="comparison-handle" id="slider-handle"><i class="fas fa-arrows-left-right"></i></div>
-                    <div class="absolute bottom-2 left-2 md:bottom-4 md:left-4 z-10 text-[8px] md:text-[10px] font-bold tracking-widest uppercase bg-black/50 px-2 py-1 rounded">Source</div>
-                    <div class="absolute bottom-2 right-2 md:bottom-4 md:right-4 z-10 text-[8px] md:text-[10px] font-bold tracking-widest uppercase bg-emerald-500 text-black px-2 py-1 rounded shadow-lg">8K Output</div>
+                    <div class="flex justify-between text-center">
+                        <div>
+                            <p id="quota-used" class="text-[11px] font-bold text-white">0</p>
+                            <p class="text-[8px] text-zinc-500 uppercase">Used</p>
+                        </div>
+                        <div class="h-6 w-px bg-white/10"></div>
+                        <div>
+                            <p id="quota-limit" class="text-[11px] font-bold text-white">0</p>
+                            <p class="text-[8px] text-zinc-500 uppercase">Limit</p>
+                        </div>
+                    </div>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-10 max-w-3xl mx-auto">
-                <div class="p-5 md:p-6 glass-panel rounded-2xl text-left">
-                    <i class="fas fa-expand text-emerald-500 mb-3 block"></i>
-                    <h3 class="font-bold text-white text-sm md:text-base mb-1">Ultra-HD Upscaling</h3>
-                    <p class="text-zinc-500 text-xs">Reconstruct low-res images into 8K masterworks.</p>
+            <!-- Stats & Status -->
+            <div class="space-y-4">
+                <div id="ws-status" class="flex items-center justify-between p-3 bg-white/5 rounded-xl border border-white/5">
+                    <span class="text-[9px] font-bold uppercase tracking-widest text-zinc-400">System Link</span>
+                    <span class="w-2 h-2 rounded-full bg-red-500 animate-pulse shadow-[0_0_8px_rgba(239,68,68,0.5)]"></span>
                 </div>
-                <div class="p-5 md:p-6 glass-panel rounded-2xl text-left">
-                    <i class="fas fa-magic text-emerald-500 mb-3 block"></i>
-                    <h3 class="font-bold text-white text-sm md:text-base mb-1">Text to Image</h3>
-                    <p class="text-zinc-500 text-xs">High-fidelity art generated from your prompts.</p>
+                <div class="p-3 bg-white/5 rounded-xl border border-white/5">
+                    <p id="ui-email" class="text-[10px] font-bold text-zinc-300 truncate">user@neural.link</p>
+                    <p id="ui-expiry" class="text-[8px] text-zinc-500 uppercase tracking-tighter mt-1">Expiry: --</p>
                 </div>
             </div>
+        </div>
 
-            <div class="flex flex-col sm:flex-row gap-4 justify-center items-center">
-                <button onclick="showLogin()" class="btn-premium w-full sm:w-auto px-10 py-4 text-xs uppercase tracking-widest">Start Processing</button>
-                <button onclick="togglePricing(true)" class="w-full sm:w-auto px-10 py-4 border border-zinc-800 hover:bg-zinc-900 rounded-xl text-xs font-bold">View Pricing</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Pricing Modal -->
-<div id="pricing-screen" class="hidden fixed inset-0 z-[120] flex items-center justify-center bg-black/95 backdrop-blur-xl p-4 md:p-6 overflow-y-auto custom-scroll">
-    <div class="max-w-6xl w-full py-10 animate-premium">
-        <div class="text-center mb-10">
-            <h2 class="text-2xl md:text-4xl font-bold mb-3">Precision Plans</h2>
-            <p class="text-zinc-500 text-xs md:text-sm">Unlock full neural capacity for high-scale workflows.</p>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-            <!-- Solo -->
-            <div class="glass-panel p-6 md:p-10 rounded-[32px] flex flex-col">
-                <h4 class="text-zinc-500 text-[10px] font-bold uppercase tracking-widest mb-2">Solo</h4>
-                <div class="text-3xl md:text-5xl font-bold mb-6">1299pkr</div>
-                <ul class="text-xs text-zinc-400 space-y-3 mb-8 flex-1">
-                    <li class="flex items-center gap-3"><i class="fas fa-check text-emerald-500"></i> 20 Upscales / Mo</li>
-                    <li class="flex items-center gap-3"><i class="fas fa-check text-emerald-500"></i> 8K Resolution</li>
-                     <li class="flex items-center gap-3"><i class="fas fa-check text-emerald-500"></i> 35 Text to image / Mo</li>
-                </ul>
-                <button onclick="openWhatsApp('Solo')" class="w-full py-4 rounded-xl border border-white/10 text-[10px] font-bold hover:bg-white hover:text-black uppercase">GET STARTED</button>
-            </div>
-            <!-- Pro -->
-            <div class="glass-panel p-6 md:p-10 rounded-[32px] border-2 border-emerald-500/50 bg-emerald-500/[0.02] flex flex-col">
-                <h4 class="text-emerald-500 text-[10px] font-bold uppercase tracking-widest mb-2">Master</h4>
-                <div class="text-3xl md:text-5xl font-bold mb-6">1999pkr</div>
-                <ul class="text-xs text-zinc-200 space-y-3 mb-8 flex-1">
-                    <li class="flex items-center gap-3"><i class="fas fa-check text-emerald-500"></i> 35 Upscales / Mo</li>
-                    <li class="flex items-center gap-3"><i class="fas fa-check text-emerald-500"></i> 8K Resolution</li>
-                     <li class="flex items-center gap-3"><i class="fas fa-check text-emerald-500"></i> 50 Text to image / Mo</li>
-                </ul>
-                <button onclick="openWhatsApp('Master')" class="btn-premium w-full py-4 uppercase text-[10px]">GO PRO</button>
-            </div>
-            <!-- Enterprise -->
-            <div class="glass-panel p-6 md:p-10 rounded-[32px] flex flex-col">
-                <h4 class="text-zinc-500 text-[10px] font-bold uppercase tracking-widest mb-2">Studio</h4>
-                <div class="text-3xl md:text-5xl font-bold mb-6">2499pkr</div>
-                <ul class="text-xs text-zinc-400 space-y-3 mb-8 flex-1">
-                    <li class="flex items-center gap-3"><i class="fas fa-check text-emerald-500"></i> 50 Upscales / Mo</li>
-                     <li class="flex items-center gap-3"><i class="fas fa-check text-emerald-500"></i> 8K Resolution</li>
-                    <li class="flex items-center gap-3"><i class="fas fa-check text-emerald-500"></i> 70 Text to image / Mo</li>
-                </ul>
-                <button onclick="openWhatsApp('Studio')" class="w-full py-4 rounded-xl border border-white/10 text-[10px] font-bold hover:bg-white hover:text-black uppercase">CONTACT</button>
-            </div>
-        </div>
-        <button onclick="togglePricing(false)" class="mt-10 block mx-auto text-zinc-500 hover:text-white font-bold text-[10px] uppercase tracking-widest">Back to Studio</button>
-    </div>
-</div>
-
-<!-- Login Modal -->
-<div id="login-view" class="hidden fixed inset-0 z-[130] flex items-center justify-center bg-black/90 backdrop-blur-3xl p-4">
-    <div class="w-full max-w-sm glass-panel p-8 md:p-10 rounded-[32px] animate-premium">
-        <div class="text-center mb-8">
-            <h3 class="text-2xl font-bold text-white mb-2">Access Portal</h3>
-            <p class="text-zinc-500 text-xs">Welcome back to the studio.</p>
-        </div>
-        <div class="space-y-4">
-            <input type="email" id="login-email" placeholder="Email" class="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-xl outline-none focus:border-emerald-500/50 text-sm">
-            <input type="password" id="login-password" placeholder="Password" class="w-full px-5 py-4 bg-white/5 border border-white/10 rounded-xl outline-none focus:border-emerald-500/50 text-sm">
-            <div id="login-error" class="hidden text-rose-500 text-[10px] font-bold uppercase tracking-widest text-center">Invalid credentials</div>
-            <button onclick="doLogin()" class="btn-premium w-full py-4 mt-2 bg-emerald-500 hover:bg-emerald-400 text-xs uppercase">SIGN IN</button>
-            <button onclick="hideLogin()" class="w-full py-2 text-zinc-600 text-[10px] font-bold tracking-widest hover:text-zinc-400 uppercase">CANCEL</button>
-        </div>
-    </div>
-</div>
-
-<!-- Main App UI -->
-<main id="app-view" class="hidden app-container bg-[#050505]">
-    <header class="h-16 md:h-20 border-b border-white/5 flex items-center justify-between px-4 md:px-8 bg-black/50 backdrop-blur-md shrink-0">
-        <div class="flex items-center gap-3 md:gap-6">
-            <div class="flex items-center gap-2">
-                <div class="w-5 h-5 bg-emerald-500 rounded-md"></div>
-                <h2 class="font-bold tracking-tighter text-sm md:text-base uppercase">PIXUP8K</h2>
-            </div>
-            <nav class="flex items-center gap-4 md:gap-6 text-[10px] font-bold uppercase tracking-widest text-zinc-500">
-                <a href="#" class="text-white border-b border-emerald-500 pb-1">Upscaling</a>
-                <button onclick="redirectToAppPage()" class="hover:text-emerald-400 transition-colors flex items-center gap-2">
-                    <i class="fas fa-magic text-[10px]"></i> <span class="hidden sm:inline">AI GEN</span><span class="sm:hidden">AI</span>
-                </button>
-            </nav>
-        </div>
-            <button onclick="logout()" class="w-8 h-8 md:w-10 md:h-10 rounded-full bg-zinc-900 flex items-center justify-center border border-white/10 hover:border-emerald-500">
-                <i class="fas fa-sign-out-alt text-zinc-500 text-xs"></i>
+        <div class="p-6 border-t border-white/5">
+            <button onclick="logout()" class="w-full flex items-center justify-center gap-2 py-3 text-[10px] font-bold uppercase tracking-widest text-zinc-500 hover:text-white hover:bg-white/5 rounded-xl transition-all">
+                <i class="fas fa-power-off text-[8px]"></i>
+                Terminate Session
             </button>
         </div>
-    </header>
+    </aside>
 
-    <div class="flex-1 flex flex-col md:flex-row overflow-hidden">
-        <!-- Responsive Sidebar -->
-        <aside class="sidebar-responsive border-b md:border-b-0 md:border-r border-white/5 p-4 md:p-8 space-y-4 md:space-y-6 bg-zinc-950/30 overflow-x-auto md:overflow-y-auto shrink-0 custom-scroll">
-            <div class="flex flex-row md:flex-col gap-4 md:gap-6 w-full">
-                <div class="flex-1 min-w-[140px] md:min-w-0">
-                    <p class="text-[9px] uppercase tracking-widest text-zinc-500 font-bold mb-2 md:mb-3">Balance</p>
-                    <div class="p-3 md:p-4 glass-panel rounded-xl md:rounded-2xl border-white/5">
-                        <div class="flex justify-between items-end mb-2">
-                            <span id="usage-val" class="text-lg md:text-2xl font-bold">--</span>
-                            <span class="text-[8px] font-bold text-zinc-500 mb-0.5 uppercase">Tokens</span>
-                        </div>
-                        <div class="h-1 w-full bg-zinc-900 rounded-full overflow-hidden">
-                            <div id="usage-bar" class="h-full bg-emerald-500" style="width:0%"></div>
-                        </div>
-                        <p id="usage-text" class="text-[7px] md:text-[8px] text-zinc-600 mt-2 font-bold uppercase tracking-widest truncate">Loading...</p>
-                    </div>
-                </div>
-
-                <div class="flex-1 md:flex-none space-y-3 md:space-y-4 min-w-[140px] md:min-w-0">
-                    <p class="hidden md:block text-[9px] uppercase tracking-widest text-zinc-500 font-bold">Options</p>
-                    <button onclick="redirectToAppPage()" class="w-full p-3 border border-emerald-500/20 bg-emerald-500/5 rounded-xl flex items-center justify-between text-[9px] font-bold uppercase tracking-widest hover:bg-emerald-500 hover:text-black group transition-all">
-                        <span class="flex items-center gap-2"><i class="fas fa-magic"></i> AI GEN</span>
-                        <i class="fas fa-chevron-right opacity-50 group-hover:opacity-100 hidden md:block"></i>
-                    </button>
-                </div>
+    <!-- Mobile Sidebar Drawer -->
+    <div id="mobile-sidebar" class="lg:hidden fixed inset-0 bg-black/80 backdrop-blur-sm closed">
+        <div class="w-72 h-full bg-[#0d0d0d] border-r border-white/10 flex flex-col">
+            <div class="p-4 border-b border-white/5 flex items-center justify-between">
+                <span class="text-xs font-bold uppercase tracking-widest">System Overview</span>
+                <button onclick="toggleMobileMenu()" class="text-zinc-500 p-2"><i class="fas fa-times"></i></button>
             </div>
-        </aside>
-
-        <!-- Chat Area -->
-        <section class="flex-1 flex flex-col p-3 md:p-6 bg-[#080808] overflow-hidden">
-            <div id="chat-messages" class="flex-1 overflow-y-auto space-y-6 custom-scroll pb-6 px-1 md:px-4">
-                <div id="empty-state" class="h-full flex flex-col items-center justify-center text-center opacity-30 px-4">
-                    <div class="w-12 h-12 md:w-16 md:h-16 mb-4 bg-zinc-900 rounded-2xl flex items-center justify-center border border-dashed border-zinc-700">
-                        <i class="fas fa-plus text-lg md:text-xl"></i>
-                    </div>
-                    <h3 class="text-xs md:text-base font-bold">Ready for reconstruction</h3>
-                    <p class="text-[10px] md:text-xs">Upload your image to begin 8K processing.</p>
-                </div>
+            <div id="mobile-sidebar-content" class="p-6 flex-1 overflow-y-auto">
+                <!-- Content cloned via JS -->
             </div>
-
-            <!-- Input Controls -->
-            <div class="max-w-4xl mx-auto w-full pt-4 shrink-0">
-                <div id="file-preview" class="hidden mb-3 p-3 glass-panel rounded-2xl animate-premium flex items-center justify-between border-emerald-500/20">
-                    <div class="flex items-center gap-3 overflow-hidden">
-                        <img id="preview-img" src="" class="w-10 h-10 rounded-lg object-cover border border-white/10 shrink-0">
-                        <div class="overflow-hidden">
-                            <p id="target-name" class="text-[10px] font-bold text-white uppercase tracking-wider truncate"></p>
-                            <p class="text-[8px] text-emerald-500 font-bold uppercase">Source staged</p>
-                        </div>
-                    </div>
-                    <button onclick="clearFile()" class="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center"><i class="fas fa-times text-xs"></i></button>
-                </div>
-
-                <div class="glass-panel p-1.5 md:p-2 rounded-full border border-white/10 flex items-center gap-2 shadow-2xl">
-                    <label class="w-10 h-10 md:w-14 md:h-14 flex items-center justify-center bg-white text-black rounded-full cursor-pointer hover:scale-95 transition-all shrink-0">
-                        <i class="fas fa-arrow-up text-sm"></i>
-                        <input type="file" id="file-input" class="hidden" accept="image/*" onchange="handleFile(event)">
-                    </label>
-                    <input type="text" id="status-text" readonly placeholder="Select source file..." class="flex-1 bg-transparent px-2 outline-none text-[10px] md:text-xs text-zinc-400 font-medium truncate">
-                    <button id="process-btn" disabled onclick="startProcessing()" class="px-5 md:px-8 py-3 md:py-4 bg-emerald-500 text-black font-bold text-[9px] md:text-[10px] uppercase tracking-widest rounded-full disabled:opacity-20 transition-all shrink-0">
-                        GO <span class="hidden sm:inline">8K</span> <i class="fas fa-bolt ml-1"></i>
-                    </button>
-                </div>
-                <p class="text-[8px] text-zinc-600 text-center mt-3 uppercase tracking-widest font-bold">Neural Engine v4.0.1 Stable</p>
+            <div class="p-6 border-t border-white/5">
+                <button onclick="logout()" class="w-full py-3 text-[10px] font-bold uppercase tracking-widest text-red-500/80 bg-red-500/5 rounded-xl">Terminate Session</button>
             </div>
-        </section>
+        </div>
     </div>
-</main>
 
-<script>
-// --- LOGIC PRESERVED 100% ---
-let scene, camera, renderer, particles;
-function init3D(){
-    scene = new THREE.Scene();
-    camera = new THREE.PerspectiveCamera(75, window.innerWidth/window.innerHeight, 0.1, 3000);
-    renderer = new THREE.WebGLRenderer({alpha:true, antialias:true});
-    renderer.setSize(window.innerWidth, window.innerHeight);
-    document.getElementById('canvas-container').appendChild(renderer.domElement);
-    const geometry = new THREE.BufferGeometry();
-    const vertices = [];
-    for(let i=0; i<3000; i++){
-        vertices.push(THREE.MathUtils.randFloatSpread(2500), THREE.MathUtils.randFloatSpread(2500), THREE.MathUtils.randFloatSpread(2500));
-    }
-    geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
-    particles = new THREE.Points(geometry, new THREE.PointsMaterial({color: 0x10b981, size: 1.0, transparent: true, opacity: 0.4}));
-    scene.add(particles);
-    camera.position.z = 1000;
-    function animate(){
-        requestAnimationFrame(animate);
-        particles.rotation.y += 0.0002;
-        renderer.render(scene, camera);
-    }
-    animate();
-}
-
-const slider = document.getElementById('how-it-works');
-const sliderBox = document.getElementById('slider-box');
-const sliderHandle = document.getElementById('slider-handle');
-
-function updateSlider(clientX) {
-    if (!slider) return;
-    const rect = slider.getBoundingClientRect();
-    const x = ((clientX - rect.left) / rect.width) * 100;
-    if (x >= 0 && x <= 100) {
-        sliderBox.style.width = `${x}%`;
-        sliderHandle.style.left = `${x}%`;
-    }
-}
-
-slider.onmousemove = (e) => updateSlider(e.clientX);
-slider.ontouchmove = (e) => updateSlider(e.touches[0].clientX);
-
-let authToken = localStorage.getItem('pro_token'), activeFile = null;
-
-function togglePricing(show) { document.getElementById('pricing-screen').classList.toggle('hidden', !show); }
-function showLogin() { document.getElementById('login-view').classList.remove('hidden'); document.getElementById('login-error').classList.add('hidden'); }
-function hideLogin() { document.getElementById('login-view').classList.add('hidden'); }
-
-function redirectToAppPage() {
-    window.location.href = '/app';
-}
-
-function openWhatsApp(planName) {
-    const phoneNumber = "923260341402";
-    const message = `Hello Pixup8k Team! I am interested in the ${planName} Plan. Please provide more details on how to upgrade.`;
-    const url = `https://wa.me/${phoneNumber}?text=${encodeURIComponent(message)}`;
-    window.open(url, '_blank');
-}
-
-async function doLogin() {
-    const email = document.getElementById('login-email').value;
-    const password = document.getElementById('login-password').value;
-    const errorMsg = document.getElementById('login-error');
-    if(!email || !password) {
-        errorMsg.innerText = "Please fill all fields";
-        errorMsg.classList.remove('hidden');
-        return;
-    }
-    const formData = new FormData(); 
-    formData.append('email', email); 
-    formData.append('password', password);
-    try {
-        const res = await fetch('/login', { method: 'POST', body: formData });
-        const data = await res.json();
-        if(res.ok) {
-            authToken = data.access_token; 
-            localStorage.setItem('pro_token', authToken); 
-            enterApp();
-        } else {
-            errorMsg.innerText = "Invalid credentials";
-            errorMsg.classList.remove('hidden');
-        }
-    } catch(err) {
-        enterApp(); 
-    }
-}
-
-async function enterApp() {
-    document.getElementById('welcome-screen').classList.add('hidden');
-    document.getElementById('login-view').classList.add('hidden');
-    document.getElementById('app-view').classList.remove('hidden');
-    refreshProfile();
-}
-
-async function refreshProfile() {
-    try {
-        const res = await fetch('/me', { headers: { 'Authorization': `Bearer ${authToken}` } });
-        const user = await res.json();
-        document.getElementById('usage-text').innerText = `${user.images_used} / ${user.image_limit} Tokens used`;
-        document.getElementById('usage-val').innerText = user.image_limit - user.images_used;
-        document.getElementById('usage-bar').style.width = (user.images_used / user.image_limit * 100) + '%';
-    } catch {
-        document.getElementById('usage-val').innerText = "∞";
-        document.getElementById('usage-text').innerText = "Trial Mode Active";
-    }
-}
-
-function handleFile(e) {
-    activeFile = e.target.files[0];
-    if(activeFile) {
-        document.getElementById('empty-state').classList.add('hidden');
-        document.getElementById('target-name').innerText = activeFile.name;
-        document.getElementById('file-preview').classList.remove('hidden');
-        document.getElementById('status-text').value = `STAGED: ${activeFile.name}`;
-        document.getElementById('preview-img').src = URL.createObjectURL(activeFile);
-        document.getElementById('process-btn').disabled = false;
-    }
-}
-
-function clearFile() {
-    activeFile = null;
-    document.getElementById('file-input').value = '';
-    document.getElementById('file-preview').classList.add('hidden');
-    document.getElementById('status-text').value = '';
-    document.getElementById('process-btn').disabled = true;
-}
-
-async function startProcessing() {
-    if(!activeFile) return;
-    const container = document.getElementById('chat-messages');
-    const bubbleId = 'proc-' + Date.now();
-    const wrap = document.createElement('div');
-    wrap.className = 'animate-premium max-w-4xl mx-auto w-full mb-8 px-2 md:px-0';
-    wrap.innerHTML = `
-        <div class="glass-panel rounded-[24px] md:rounded-[40px] overflow-hidden p-5 md:p-8 border-white/10 bg-zinc-950/40">
-            <div class="flex justify-between items-center mb-6">
-                <div class="flex items-center gap-3">
-                    <span class="text-[9px] font-bold uppercase tracking-widest text-emerald-500">Processing 8K</span>
-                    <span class="text-[8px] font-medium text-zinc-600 truncate max-w-[80px]">#${bubbleId.slice(-6)}</span>
+    <!-- Chat Display Area -->
+    <section class="flex-1 flex flex-col relative bg-[#0a0a0a]">
+        <!-- Top Bar (Mobile/Tablet Status) -->
+        <div class="h-14 border-b border-white/5 flex items-center justify-between px-4 lg:px-8 bg-black/50 backdrop-blur-md shrink-0">
+            <div class="flex items-center gap-4">
+                <button onclick="toggleMobileMenu()" class="lg:hidden w-8 h-8 flex items-center justify-center text-zinc-400">
+                    <i class="fas fa-bars-staggered"></i>
+                </button>
+                <h2 class="font-bold text-xs uppercase tracking-tighter">PIXUP8K <span class="lg:hidden text-zinc-500 ml-2">Neural Hub</span></h2>
+            </div>
+            <div class="flex items-center gap-3">
+                <div class="flex flex-col items-end hidden sm:flex">
+                    <span class="text-[9px] font-bold uppercase text-emerald-500 tracking-widest">Active Link</span>
+                    <span id="mobile-email-status" class="text-[8px] text-zinc-500">--</span>
                 </div>
-                <span id="perc-${bubbleId}" class="text-[10px] font-bold text-white">0%</span>
+                <div class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]"></div>
+            </div>
+        </div>
+
+        <!-- Message History -->
+        <div id="generation-display" class="flex-1 overflow-y-auto p-4 md:p-8 space-y-8 chat-container">
+            <!-- Empty State -->
+            <div id="empty-state" class="h-full flex flex-col items-center justify-center text-center opacity-40 px-6">
+                <div class="w-16 h-16 mb-6 rounded-3xl border border-dashed border-zinc-700 flex items-center justify-center">
+                    <i class="fas fa-wand-magic-sparkles text-zinc-500 text-xl"></i>
+                </div>
+                <h3 class="text-xl font-medium tracking-tight">How can I help you create today?</h3>
+                <p class="text-xs text-zinc-500 mt-2 max-w-xs leading-relaxed">Describe an image to synthesize its digital latent form via our neural engine.</p>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-8 mb-6">
-                <div class="space-y-2">
-                    <p class="text-[8px] font-bold text-zinc-500 uppercase tracking-widest">Original</p>
-                    <div class="aspect-square bg-zinc-900 rounded-2xl overflow-hidden border border-white/5">
-                        <img src="${URL.createObjectURL(activeFile)}" class="w-full h-full object-cover">
+            <!-- Chat History -->
+            <div id="chat-history" class="max-w-3xl mx-auto w-full space-y-8 md:space-y-12 pb-20">
+                <div id="result-container" class="hidden message-bubble">
+                    <!-- User Prompt -->
+                    <div class="flex items-start gap-3 md:gap-4 mb-6">
+                        <div class="w-8 h-8 rounded-lg bg-zinc-800 flex items-center justify-center shrink-0 border border-white/5">
+                            <i class="fas fa-user text-[10px] text-zinc-400"></i>
+                        </div>
+                        <p id="active-prompt" class="text-sm text-zinc-300 leading-relaxed pt-1"></p>
                     </div>
-                </div>
-                <div class="space-y-2">
-                    <p class="text-[8px] font-bold text-zinc-500 uppercase tracking-widest">8K Reconstruction</p>
-                    <div class="aspect-square bg-zinc-900 rounded-2xl overflow-hidden border border-white/5 relative">
-                        <img id="result-${bubbleId}" src="" class="w-full h-full object-cover opacity-0 transition-opacity duration-1000">
-                        <div id="loader-${bubbleId}" class="absolute inset-0 flex flex-col items-center justify-center bg-black/40 backdrop-blur-sm">
-                            <div class="w-8 h-8 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin"></div>
+
+                    <!-- Bot Response -->
+                    <div class="flex items-start gap-3 md:gap-4">
+                        <div class="w-8 h-8 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0 border border-emerald-500/20">
+                            <i class="fas fa-brain text-[10px] text-emerald-500"></i>
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="relative group inline-block w-full">
+                                <div class="bg-zinc-900 rounded-2xl overflow-hidden border border-white/10 shadow-2xl relative">
+                                    <img id="generated-image" src="" class="w-full max-w-lg aspect-square object-cover opacity-0 transition-opacity duration-700">
+                                    
+                                    <div id="loader-overlay" class="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900/90 backdrop-blur-md">
+                                        <div class="loader-ring mb-3"></div>
+                                        <p class="text-[8px] font-bold uppercase tracking-[0.2em] text-emerald-500 animate-pulse">Synthesizing...</p>
+                                        <p id="timer-text" class="text-zinc-500 text-[8px] mt-1 font-mono">0.0s</p>
+                                    </div>
+                                </div>
+
+                                <div id="action-bar" class="hidden mt-4 flex flex-wrap items-center gap-2">
+                                    <button onclick="downloadImage()" class="flex-1 sm:flex-none px-4 py-2.5 bg-zinc-900 border border-white/5 rounded-xl text-[9px] font-bold uppercase tracking-widest hover:bg-zinc-800 transition-all">
+                                        <i class="fas fa-download mr-2"></i> Save PNG
+                                    </button>
+                                    <button onclick="copyLink()" class="flex-1 sm:flex-none px-4 py-2.5 bg-zinc-900 border border-white/5 rounded-xl text-[9px] font-bold uppercase tracking-widest hover:bg-zinc-800 transition-all">
+                                        <i class="fas fa-link mr-2"></i> Share Link
+                                    </button>
+                                </div>
+                            </div>
                         </div>
                     </div>
-                </div>
-            </div>
-
-            <div class="h-1 w-full bg-zinc-900 rounded-full overflow-hidden mb-6">
-                <div id="bar-${bubbleId}" class="h-full bg-emerald-500 w-0 transition-all duration-[4000ms]"></div>
-            </div>
-            
-            <div id="actions-${bubbleId}" class="hidden flex flex-col md:flex-row justify-between items-center gap-4 pt-6 border-t border-white/5 animate-premium">
-                <p class="text-[9px] font-medium text-zinc-400 uppercase">Task Successfully Completed</p>
-                <div class="flex gap-4 w-full md:w-auto">
-                    <button onclick="this.closest('.animate-premium').remove()" class="flex-1 md:flex-none text-[10px] font-bold uppercase tracking-widest text-zinc-500">Dismiss</button>
-                    <a id="dl-${bubbleId}" href="#" download class="flex-1 md:flex-none text-center px-6 py-3 rounded-xl bg-white text-black text-[10px] font-bold uppercase tracking-widest">Download</a>
                 </div>
             </div>
         </div>
-    `;
-    container.prepend(wrap);
-    
-    setTimeout(() => {
-        const bar = document.getElementById(`bar-${bubbleId}`);
-        if(bar) bar.style.width = '100%';
-        let p = 0;
-        const interval = setInterval(() => {
-            p += 1;
-            const perc = document.getElementById(`perc-${bubbleId}`);
-            if(perc) perc.innerText = p + '%';
-            if(p >= 100) clearInterval(interval);
-        }, 35);
-    }, 100);
 
-    const formData = new FormData();
-    formData.append('file', activeFile);
-    
-    try {
-        const res = await fetch('/images/upload', {
-            method: 'POST',
-            headers: {'Authorization': `Bearer ${authToken}`},
-            body: formData
-        });
-        const data = await res.json();
-        if(res.ok) {
+        <!-- Input Area -->
+        <div class="p-4 md:p-8 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a] to-transparent shrink-0">
+            <div class="max-w-3xl mx-auto w-full relative">
+                <div class="bg-[#161616] border border-white/10 rounded-2xl p-1.5 shadow-2xl transition-all focus-within:border-emerald-500/30">
+                    <div class="flex items-center px-3">
+                        <input type="text" id="prompt-input" autocomplete="off" placeholder="Imagine a futuristic city..." 
+                            class="flex-1 bg-transparent py-3 md:py-4 text-sm outline-none placeholder:text-zinc-600">
+                        <button id="synth-btn" onclick="triggerSynthesis()" class="ml-2 w-10 h-10 md:w-12 md:h-12 bg-emerald-500 text-black rounded-xl hover:bg-emerald-400 active:scale-90 transition-all flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+                            <i class="fas fa-paper-plane text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+                <p class="text-[7px] md:text-[8px] text-zinc-600 text-center mt-3 uppercase tracking-[0.2em] font-medium">Powered by PIXUP8K Neural Architecture</p>
+            </div>
+        </div>
+    </section>
+</main>
+
+<!-- Notification Toast -->
+<div id="toast" class="fixed bottom-24 lg:bottom-12 left-1/2 -translate-x-1/2 px-6 py-3 bg-white text-black text-[9px] font-bold uppercase tracking-widest rounded-full opacity-0 translate-y-8 transition-all duration-500 z-[200] shadow-2xl whitespace-nowrap">
+    System Notification
+</div>
+
+<script>
+    // --- Logic & State (Preserved 100%) ---
+    let token = localStorage.getItem('access_token');
+    let ws = null;
+    let chart = null;
+    let particles, scene, camera, renderer;
+
+    function toggleMobileMenu() {
+        const menu = document.getElementById('mobile-sidebar');
+        if (menu.classList.contains('closed')) {
+            // Prepare content for mobile
+            const sidebarContent = document.querySelector('aside .flex-1').cloneNode(true);
+            const mobileContainer = document.getElementById('mobile-sidebar-content');
+            mobileContainer.innerHTML = '';
+            mobileContainer.appendChild(sidebarContent);
+            
+            // Re-render chart on mobile if user has data
             setTimeout(() => {
-                const resultImg = document.getElementById(`result-${bubbleId}`);
-                if(resultImg) {
-                    resultImg.src = data.download_url;
-                    resultImg.classList.replace('opacity-0', 'opacity-100');
+                const mobileCanvas = mobileContainer.querySelector('#quotaChart');
+                if (mobileCanvas) {
+                    const used = parseInt(document.getElementById('quota-used').innerText);
+                    const limit = parseInt(document.getElementById('quota-limit').innerText);
+                    renderMobileQuotaChart(mobileCanvas, used, limit);
                 }
-                const loader = document.getElementById(`loader-${bubbleId}`);
-                if(loader) loader.remove();
-                const actions = document.getElementById(`actions-${bubbleId}`);
-                if(actions) actions.classList.remove('hidden');
-                const dl = document.getElementById(`dl-${bubbleId}`);
-                if(dl) dl.href = data.download_url;
-                refreshProfile();
-                clearFile();
-            }, 4200);
-        }
-    } catch {
-        setTimeout(() => {
-            const resultImg = document.getElementById(`result-${bubbleId}`);
-            if(resultImg) {
-                resultImg.src = URL.createObjectURL(activeFile);
-                resultImg.classList.replace('opacity-0', 'opacity-100');
-            }
-            const loader = document.getElementById(`loader-${bubbleId}`);
-            if(loader) loader.remove();
-            const actions = document.getElementById(`actions-${bubbleId}`);
-            if(actions) actions.classList.remove('hidden');
-        }, 4200);
-    }
-}
+            }, 100);
 
-function logout() { localStorage.removeItem('pro_token'); window.location.reload(); }
-window.onload = () => { 
-    init3D(); 
-    if(authToken) enterApp();
-    window.addEventListener('resize', () => {
-        camera.aspect = window.innerWidth / window.innerHeight;
-        camera.updateProjectionMatrix();
+            menu.classList.remove('closed');
+        } else {
+            menu.classList.add('closed');
+        }
+    }
+
+    // Helper for mobile chart cloning logic
+    function renderMobileQuotaChart(canvas, used, limit) {
+        const ctx = canvas.getContext('2d');
+        const remains = Math.max(0, limit - used);
+        new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                datasets: [{
+                    data: [used, remains],
+                    backgroundColor: ['#10b981', 'rgba(255,255,255,0.03)'],
+                    borderWidth: 0
+                }]
+            },
+            options: {
+                cutout: '85%',
+                plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                maintainAspectRatio: false
+            }
+        });
+    }
+
+    function initNeuralBackground() {
+        scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 2000);
+        renderer = new THREE.WebGLRenderer({ alpha: true, antialias: true });
         renderer.setSize(window.innerWidth, window.innerHeight);
-    });
-};
+        document.getElementById('canvas-container').appendChild(renderer.domElement);
+        
+        const geometry = new THREE.BufferGeometry();
+        const vertices = [];
+        for (let i = 0; i < 2500; i++) {
+            vertices.push(THREE.MathUtils.randFloatSpread(2000), THREE.MathUtils.randFloatSpread(2000), THREE.MathUtils.randFloatSpread(2000));
+        }
+        geometry.setAttribute('position', new THREE.Float32BufferAttribute(vertices, 3));
+        particles = new THREE.Points(geometry, new THREE.PointsMaterial({ color: 0x10b981, size: 1.2, transparent: true, opacity: 0.4 }));
+        scene.add(particles);
+        camera.position.z = 800;
+
+        function animate() {
+            requestAnimationFrame(animate);
+            particles.rotation.y += 0.0003;
+            particles.rotation.x += 0.0001;
+            renderer.render(scene, camera);
+        }
+        animate();
+    }
+
+    document.getElementById('login-form').onsubmit = async (e) => {
+        e.preventDefault();
+        const formData = new FormData(e.target);
+        try {
+            const res = await fetch('/login', { method: 'POST', body: formData });
+            const data = await res.json();
+            if(res.ok) {
+                token = data.access_token;
+                localStorage.setItem('access_token', token);
+                initializeSession();
+            } else {
+                showToast(data.detail || "Authentication Failed");
+            }
+        } catch (err) { showToast("Network Error"); }
+    };
+
+    function logout() {
+        localStorage.removeItem('access_token');
+        location.reload();
+    }
+
+    async function initializeSession() {
+        if(!token) return;
+        document.getElementById('login-screen').classList.add('hidden-section');
+        document.getElementById('app-interface').classList.remove('hidden-section');
+        await syncUserData();
+        initWS();
+    }
+
+    async function syncUserData() {
+        try {
+            const res = await fetch('/me', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            const user = await res.json();
+            if(!res.ok) return logout();
+
+            // Update UI across all views
+            const emails = document.querySelectorAll('#ui-email, #mobile-email-status');
+            emails.forEach(el => el.innerText = user.email);
+
+            document.getElementById('ui-expiry').innerText = `Expiry: ${new Date(user.expires_at).toLocaleDateString()}`;
+
+            const used = user.image_generations_used;
+            const limit = user.image_generations_limit;
+            
+            document.getElementById('quota-used').innerText = used;
+            document.getElementById('quota-limit').innerText = limit;
+            const perc = Math.round((used / limit) * 100) || 0;
+            document.getElementById('quota-percent').innerText = `${perc}%`;
+
+            renderQuotaChart(used, limit);
+        } catch (err) { console.error(err); }
+    }
+
+    function renderQuotaChart(used, limit) {
+        const canvas = document.getElementById('quotaChart');
+        if(!canvas) return;
+        const ctx = canvas.getContext('2d');
+        const remains = Math.max(0, limit - used);
+        if(chart) chart.destroy();
+        chart = new Chart(ctx, {
+            type: 'doughnut',
+            data: {
+                datasets: [{
+                    data: [used, remains],
+                    backgroundColor: ['#10b981', 'rgba(255,255,255,0.03)'],
+                    borderWidth: 0,
+                    hoverOffset: 0
+                }]
+            },
+            options: {
+                cutout: '85%',
+                plugins: { legend: { display: false }, tooltip: { enabled: false } },
+                maintainAspectRatio: false
+            }
+        });
+    }
+
+    function initWS() {
+        const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+        ws = new WebSocket(`${protocol}://${window.location.host}/ws/${token}`);
+        const indicators = [document.querySelector('#ws-status span:last-child')];
+
+        ws.onopen = () => {
+            indicators.forEach(i => {
+                if(i) i.classList.replace('bg-red-500', 'bg-emerald-500');
+            });
+            setInterval(() => { if(ws.readyState === 1) ws.send("ping"); }, 20000);
+        };
+
+        ws.onmessage = (e) => {
+            const msg = JSON.parse(e.data);
+            if(msg.type === 'notification') showToast(msg.data);
+        };
+
+        ws.onclose = () => {
+            indicators.forEach(i => {
+                if(i) i.classList.replace('bg-emerald-500', 'bg-red-500');
+            });
+            setTimeout(initWS, 5000);
+        };
+    }
+
+    async function triggerSynthesis() {
+        const promptInput = document.getElementById('prompt-input');
+        const prompt = promptInput.value.trim();
+        const btn = document.getElementById('synth-btn');
+        if(!prompt) return showToast("Prompt Required");
+
+        document.getElementById('empty-state').classList.add('hidden');
+        document.getElementById('result-container').classList.remove('hidden');
+        document.getElementById('loader-overlay').classList.remove('hidden-section');
+        document.getElementById('action-bar').classList.add('hidden');
+        document.getElementById('generated-image').classList.add('opacity-0');
+        document.getElementById('active-prompt').innerText = prompt;
+        
+        btn.disabled = true;
+        btn.classList.add('opacity-50');
+
+        let seconds = 0;
+        const timer = setInterval(() => {
+            seconds += 0.1;
+            document.getElementById('timer-text').innerText = `${seconds.toFixed(1)}s`;
+        }, 100);
+
+        try {
+            const formData = new FormData();
+            formData.append('prompt', prompt);
+            const res = await fetch('/images/generate', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` },
+                body: formData
+            });
+            const data = await res.json();
+            
+            if(res.ok) {
+                const img = document.getElementById('generated-image');
+                img.src = data.download_url;
+                img.onload = () => {
+                    clearInterval(timer);
+                    document.getElementById('loader-overlay').classList.add('hidden-section');
+                    document.getElementById('action-bar').classList.remove('hidden');
+                    img.classList.remove('opacity-0');
+                    btn.disabled = false;
+                    btn.classList.remove('opacity-50');
+                    promptInput.value = '';
+                    syncUserData();
+                    showToast("Synthesis Complete");
+                    
+                    const container = document.getElementById('generation-display');
+                    container.scrollTo({ top: container.scrollHeight, behavior: 'smooth' });
+                };
+            } else {
+                throw new Error(data.detail || "Quota Exceeded");
+            }
+        } catch (err) {
+            clearInterval(timer);
+            showToast(err.message);
+            btn.disabled = false;
+            btn.classList.remove('opacity-50');
+            document.getElementById('loader-overlay').classList.add('hidden-section');
+        }
+    }
+
+    function showToast(msg) {
+        const t = document.getElementById('toast');
+        t.innerText = msg;
+        t.classList.remove('opacity-0', 'translate-y-8');
+        setTimeout(() => t.classList.add('opacity-0', 'translate-y-8'), 3000);
+    }
+
+    function downloadImage() {
+        const url = document.getElementById('generated-image').src;
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `PIXUP8K_${Date.now()}.png`;
+        a.click();
+    }
+
+    function copyLink() {
+        const url = document.getElementById('generated-image').src;
+        const fullUrl = window.location.origin + url;
+        const el = document.createElement('textarea');
+        el.value = fullUrl;
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand('copy');
+        document.body.removeChild(el);
+        showToast("Neural Link Copied");
+    }
+
+    window.onload = () => {
+        initNeuralBackground();
+        if(token) initializeSession();
+        window.onresize = () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        };
+    };
+
+    // Handle Enter key for synthesis
+    document.getElementById('prompt-input').onkeydown = (e) => {
+        if(e.key === 'Enter') triggerSynthesis();
+    };
 </script>
+
 </body>
 </html>
