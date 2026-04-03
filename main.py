@@ -73,6 +73,7 @@ try:
     )
     db = client["image_ai"]
     users_col = db["users"]
+    image_history_col = db["image_history"]
     # Test connection immediately
     client.admin.command("ping")
     logger.info("MongoDB connected successfully")
@@ -83,10 +84,10 @@ except Exception as e:
 # =========================================================
 # FASTAPI APP
 # =========================================================
-app = FastAPI(title="ImageAI Pro API",
-              docs_url= None,
-              redoc_url=None,
-              openapi_url=None
+app = FastAPI(title="ImageAI Pro API"
+            #   docs_url= None,
+            #   redoc_url=None,
+            #   openapi_url=None
              )
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -185,7 +186,9 @@ async def me(user: dict = Depends(get_current_user)):
         "images_used": user["images_used"],
         "expires_at": user["expires_at"],
         "image_generations_limit": user["image_generations_limit"],
-        "image_generations_used": user["image_generations_used"]
+        "image_generations_used": user["image_generations_used"],
+        "background_removals_limit": user.get("background_removals_limit", 0),
+        "background_removals_used": user.get("background_removals_used", 0)
     }
 
 # -------------------- IMAGE UPLOAD (UPSCALING) --------------------
@@ -271,6 +274,17 @@ async def upload_image(
         {"email": user["email"]},
         {"$inc": {"images_used": 1}}
     )
+
+    # Save to image history
+    image_history_col.insert_one({
+        "email": user["email"],
+        "type": "upscale",
+        "original_filename": file.filename,
+        "processed_filename": f"{image_id}_processed.png",
+        "prompt": None,
+        "created_at": datetime.utcnow(),
+        "ai_used": ai_used
+    })
 
     return {
         "status": "success",
@@ -404,6 +418,17 @@ async def generate_from_text(
             {"$inc": {"image_generations_used": 1}} 
         )
 
+        # Save to image history
+        image_history_col.insert_one({
+            "email": user["email"],
+            "type": "generation",
+            "original_filename": None,
+            "processed_filename": filename,
+            "prompt": prompt,
+            "created_at": datetime.utcnow(),
+            "ai_used": None
+        })
+
         return {
             "status": "success",
             "type": "generation",
@@ -466,3 +491,152 @@ def renew_user_alt(
 
     users_col.update_one({"email": email}, {"$set": update})
     return {"message": "User renewed successfully"}
+
+
+# =========================================================
+# FEATURE 3: BACKGROUND REMOVAL (CLIPDROP)
+# =========================================================
+@app.post("/images/remove-background", tags=["AI Features"])
+async def remove_background(
+    file: UploadFile = File(...),
+    user: dict = Depends(get_current_user)
+):
+    """Removes image background using ClipDrop API and tracks quota independently."""
+
+    # 1. Quota check (isolated to background removal)
+    if user.get("background_removals_used", 0) >= user.get("background_removals_limit", 0):
+        raise HTTPException(
+            status_code=403,
+            detail="Background removal quota reached. Other features might still be available."
+        )
+
+    # 2. Validate file type
+    ext = os.path.splitext(file.filename)[1].lower()
+    if ext not in [".png", ".jpg", ".jpeg", ".jfif"]:
+        raise HTTPException(status_code=400, detail="Only PNG or JPG images are supported")
+
+    # 3. Save uploaded file
+    image_id = str(uuid.uuid4())
+    input_path = os.path.join(UPLOAD_DIR, f"{image_id}{ext}")
+    output_filename = f"{image_id}_bg_removed.png"
+    output_path = os.path.join(OUTPUT_DIR, output_filename)
+
+    contents = await file.read()
+    with open(input_path, "wb") as f:
+        f.write(contents)
+
+    logger.info(f"User {user['email']} → Background removal started for {file.filename}")
+
+    # 4. Call ClipDrop Remove Background API
+    if not CLIPDROP_API_KEY:
+        raise HTTPException(status_code=500, detail="ClipDrop service not configured")
+
+    try:
+        with open(input_path, "rb") as img_file:
+            response = requests.post(
+                "https://clipdrop-api.co/remove-background/v1",
+                files={"image_file": (file.filename, img_file, f"image/{ext.lstrip('.')}")},
+                headers={"x-api-key": CLIPDROP_API_KEY},
+                timeout=120
+            )
+
+        if response.status_code != 200:
+            logger.error(f"ClipDrop remove-background failed: {response.status_code} {response.text}")
+            raise HTTPException(status_code=502, detail="Background removal API failed")
+
+        with open(output_path, "wb") as f:
+            f.write(response.content)
+
+        logger.info(f"Background removal successful → {output_filename}")
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"ClipDrop remove-background error: {e}")
+        raise HTTPException(status_code=500, detail=f"Background removal failed: {str(e)}")
+
+    # 5. Increment quota
+    users_col.update_one(
+        {"email": user["email"]},
+        {"$inc": {"background_removals_used": 1}}
+    )
+
+    # 6. Save to image history
+    image_history_col.insert_one({
+        "email": user["email"],
+        "type": "background_removal",
+        "original_filename": file.filename,
+        "processed_filename": output_filename,
+        "prompt": None,
+        "created_at": datetime.utcnow(),
+        "ai_used": None
+    })
+
+    # 7. Optional WebSocket notification
+    await manager.send_personal_message(
+        {"type": "background_removed", "data": f"/processed/{output_filename}"},
+        user["email"]
+    )
+
+    return {
+        "status": "success",
+        "type": "background_removal",
+        "download_url": f"/processed/{output_filename}"
+    }
+
+
+# =========================================================
+# USER IMAGE HISTORY
+# =========================================================
+@app.get("/images/history", tags=["AI Features"])
+async def get_image_history(user: dict = Depends(get_current_user)):
+    """Returns all processed/generated images for the logged-in user, newest first."""
+
+    records = image_history_col.find(
+        {"email": user["email"]},
+        {"_id": 0}
+    ).sort("created_at", -1)
+
+    history = []
+    for record in records:
+        history.append({
+            "type": record.get("type"),
+            "download_url": f"/processed/{record['processed_filename']}" if record.get("processed_filename") else None,
+            "created_at": record.get("created_at").isoformat() if record.get("created_at") else None,
+            "prompt": record.get("prompt"),
+            "ai_used": record.get("ai_used")
+        })
+
+    logger.info(f"History fetched for {user['email']} → {len(history)} records")
+    return history
+
+
+@app.post("/background/renew", tags=["Admin"])
+def renew_background_quota(
+    email: str,
+    extra_days: int = 30,
+    reset_counter: bool = True,
+    new_limit: Optional[int] = None
+):
+    user = users_col.find_one({"email": email})
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    update = {
+        "expires_at": datetime.utcnow() + timedelta(days=extra_days),
+        "active": True
+    }
+
+    # Reset usage
+    if reset_counter:
+        update["background_removals_used"] = 0
+
+    # Update limit if provided
+    if new_limit is not None:
+        update["background_removals_limit"] = new_limit
+
+    users_col.update_one({"email": email}, {"$set": update})
+
+    return {
+        "message": "Background removal quota renewed successfully"
+    }
