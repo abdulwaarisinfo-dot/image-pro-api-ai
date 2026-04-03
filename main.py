@@ -15,7 +15,6 @@ from fastapi.responses import HTMLResponse, FileResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from fastapi.security import OAuth2PasswordBearer
-from openai import OpenAI
 
 from jose import jwt, JWTError
 from passlib.context import CryptContext
@@ -40,10 +39,6 @@ if not JWT_SECRET:
     raise ValueError("JWT_SECRET_KEY is not set")
 
 CLIPDROP_API_KEY = os.getenv("CLIPDROP_API_KEY")
-
-OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
-if not OPENAI_API_KEY:
-    raise ValueError("OPENAI_API_KEY is not set")
 
 ALGORITHM = "HS256"
 
@@ -185,8 +180,6 @@ async def me(user: dict = Depends(get_current_user)):
         "image_limit": user["image_limit"],
         "images_used": user["images_used"],
         "expires_at": user["expires_at"],
-        "image_generations_limit": user["image_generations_limit"],
-        "image_generations_used": user["image_generations_used"],
         "background_removals_limit": user.get("background_removals_limit", 0),
         "background_removals_used": user.get("background_removals_used", 0)
     }
@@ -199,7 +192,7 @@ async def upload_image(
 ):
     # CRITICAL CHANGE: Upscaling quota check is now isolated here
     if user.get("images_used", 0) >= user.get("image_limit", 0):
-        raise HTTPException(status_code=403, detail="Upscaling quota reached. Text-to-Image might still be available.")
+        raise HTTPException(status_code=403, detail="Upscaling quota reached.")
 
     ext = os.path.splitext(file.filename)[1].lower()
     if ext not in [".png", ".jpg", ".jpeg", ".jfif"]:
@@ -310,8 +303,6 @@ def seed_users():
             "password_expires_at": datetime.utcnow() + timedelta(days=1),
             "image_limit": 233,
             "images_used": 0,
-            "image_generations_limit": 35,
-            "image_generations_used": 0,
             "active": True,
             "expires_at": datetime.utcnow() + timedelta(days=34)
         }       
@@ -362,84 +353,6 @@ def renew_user(
     return {"message": "User renewed successfully"}
 
 
-# =========================================================
-# FEATURE 2: TEXT-TO-IMAGE (OPENAI DALL-E) - FIXED
-# =========================================================
-@app.post("/images/generate", tags=["AI Features"])
-async def generate_from_text(
-    prompt: str = Form(...),
-    user: dict = Depends(get_current_user)
-):
-    """Generates an image from prompt using OpenAI and counts against quota."""
-    
-    # 1. Check Configuration
-    if not OPENAI_API_KEY:
-        raise HTTPException(status_code=500, detail="OpenAI service not configured")
-
-    # 2. Quota Check (Isolated to Text-to-Image)
-    if user.get("image_generations_used", 0) >= user.get("image_generations_limit", 10):
-        raise HTTPException(status_code=403, detail="Neural generation quota exceeded. Upscaling might still be available.")
-
-    logger.info(f"User {user['email']} generating image: {prompt[:50]}...")
-
-    try:
-        client = OpenAI(api_key=OPENAI_API_KEY)
-        
-        response = client.images.generate(
-            model="dall-e-3",
-            prompt=prompt,
-            n=1,
-            size="1024x1024"
-        )
-        
-        image_url = response.data[0].url
-        
-        # 4. Download Image
-        img_res = requests.get(image_url)
-        if img_res.status_code != 200:
-            raise Exception("Failed to download image from OpenAI servers")
-        
-        img_data = img_res.content
-        
-        # 5. Ensure Directory Exists
-        if not os.path.exists(OUTPUT_DIR):
-            os.makedirs(OUTPUT_DIR)
-
-        image_id = str(uuid.uuid4())
-        filename = f"{image_id}_generated.png"
-        file_path = os.path.join(OUTPUT_DIR, filename)
-
-        with open(file_path, "wb") as f:
-            f.write(img_data)
-
-        # 6. Log usage
-        users_col.update_one(
-            {"email": user["email"]},
-            {"$inc": {"image_generations_used": 1}} 
-        )
-
-        # Save to image history
-        image_history_col.insert_one({
-            "email": user["email"],
-            "type": "generation",
-            "original_filename": None,
-            "processed_filename": filename,
-            "prompt": prompt,
-            "created_at": datetime.utcnow(),
-            "ai_used": None
-        })
-
-        return {
-            "status": "success",
-            "type": "generation",
-            "prompt": prompt,
-            "download_url": f"/processed/{filename}"
-        }
-
-    except Exception as e:
-        logger.error(f"OpenAI generation error: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Generation failed: {str(e)}")
-    
 # =========================================================
 # REAL-TIME WEBSOCKET ENDPOINT
 # =========================================================
@@ -609,7 +522,6 @@ async def get_image_history(user: dict = Depends(get_current_user)):
 
     logger.info(f"History fetched for {user['email']} → {len(history)} records")
     return history
-
 
 @app.post("/background/renew", tags=["Admin"])
 def renew_background_quota(
