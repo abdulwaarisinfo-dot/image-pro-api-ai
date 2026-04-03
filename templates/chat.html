@@ -3,9 +3,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>PIXUP8K | Professional Neural Upscaling & Text-to-Image</title>
+    <title>PIXUP8K | Neural Upscaling, Text-to-Image & Background Removal</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
@@ -213,6 +214,10 @@
             background: rgba(255,255,255,0.1);
             color: #fff;
         }
+        .demo-tag.bg-remove {
+            background: rgba(139,92,246,0.85);
+            color: #fff;
+        }
 
         /* ===== PRICING CARDS ===== */
         .pricing-card {
@@ -370,6 +375,9 @@
             <button onclick="showLogin()" class="btn-primary w-full sm:w-auto px-8 py-4">
                 <i class="fas fa-bolt"></i> Start Processing
             </button>
+            <button onclick="showLogin()" class="btn-secondary w-full sm:w-auto px-8 py-4">
+                <i class="fas fa-scissors"></i> Remove Background
+            </button>
             <button onclick="togglePricing(true)" class="btn-secondary w-full sm:w-auto px-8 py-4">
                 View Pricing
             </button>
@@ -426,15 +434,15 @@
                 <h3 class="text-base font-bold text-white mb-2">Text to Image</h3>
                 <p class="text-zinc-500 text-sm leading-relaxed">Describe your vision and watch our engine render stunning, high-fidelity artwork from your prompts in seconds.</p>
             </div>
+            <div class="feature-card" style="border-color:rgba(139,92,246,0.2)">
+                <div class="feature-icon" style="background:rgba(139,92,246,0.12);border-color:rgba(139,92,246,0.25);color:#a78bfa"><i class="fas fa-scissors"></i></div>
+                <h3 class="text-base font-bold text-white mb-2">Background Removal</h3>
+                <p class="text-zinc-500 text-sm leading-relaxed">Instantly strip backgrounds from any photo. Perfect for products, portraits, and creative composites — powered by ClipDrop AI.</p>
+            </div>
             <div class="feature-card">
                 <div class="feature-icon"><i class="fas fa-shield-alt"></i></div>
                 <h3 class="text-base font-bold text-white mb-2">Lossless Quality</h3>
                 <p class="text-zinc-500 text-sm leading-relaxed">Every pixel is reconstructed with precision. Download in original format with zero compression loss.</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon"><i class="fas fa-bolt"></i></div>
-                <h3 class="text-base font-bold text-white mb-2">Instant Processing</h3>
-                <p class="text-zinc-500 text-sm leading-relaxed">Powered by distributed GPU clusters. Most images process in under 4 seconds regardless of complexity.</p>
             </div>
         </div>
     </section>
@@ -521,6 +529,48 @@
             </div>
         </div>
     </section>
+
+    <div class="section-divider w-full max-w-5xl mx-auto"></div>
+
+    <!-- ── DEMO SHOWCASE: BG REMOVAL ── -->
+    <section class="relative w-full max-w-6xl px-6 py-14 md:py-20 z-10">
+        <p class="text-[10px] font-bold uppercase tracking-widest text-zinc-500 mb-4 flex items-center gap-2">
+            <i class="fas fa-scissors" style="color:#a78bfa"></i> Background Removal Results
+        </p>
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <div class="demo-card">
+                <img src="https://images.unsplash.com/photo-1531746020798-e6953c6e8e04?q=80&w=600" alt="Portrait BG Removed">
+                <div class="demo-card-overlay">
+                    <span class="demo-tag bg-remove">BG Removed</span>
+                    <p class="text-white text-xs font-bold">Portrait Cutout</p>
+                    <p class="text-zinc-400 text-[10px]">Messy → Clean BG</p>
+                </div>
+            </div>
+            <div class="demo-card">
+                <img src="https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=600" alt="Product BG Removed">
+                <div class="demo-card-overlay">
+                    <span class="demo-tag bg-remove">BG Removed</span>
+                    <p class="text-white text-xs font-bold">Product Shot</p>
+                    <p class="text-zinc-400 text-[10px]">Object → White BG</p>
+                </div>
+            </div>
+            <div class="demo-card">
+                <img src="https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=600" alt="Person BG Removed">
+                <div class="demo-card-overlay">
+                    <span class="demo-tag bg-remove">BG Removed</span>
+                    <p class="text-white text-xs font-bold">Studio Portrait</p>
+                    <p class="text-zinc-400 text-[10px]">Street → Studio BG</p>
+                </div>
+            </div>
+            <div class="demo-card">
+                <img src="https://images.unsplash.com/photo-1491553895911-0055eca6402d?q=80&w=600" alt="Sneaker BG Removed">
+                <div class="demo-card-overlay">
+                    <span class="demo-tag bg-remove">BG Removed</span>
+                    <p class="text-white text-xs font-bold">Product Listing</p>
+                    <p class="text-zinc-400 text-[10px]">Cluttered → Pure White</p>
+                </div>
+            </div>
+        </div>
 
     <div class="section-divider w-full max-w-5xl mx-auto"></div>
 
@@ -684,41 +734,85 @@
             </div>
             <nav class="flex items-center gap-4 md:gap-6 text-[10px] font-bold uppercase tracking-widest text-zinc-500">
                 <a href="#" class="text-white border-b border-emerald-500 pb-0.5">Upscaling</a>
-                <button onclick="redirectToAppPage()" class="hover:text-emerald-400 flex items-center gap-1.5">
+                <button onclick="showAiGenView()" class="hover:text-emerald-400 flex items-center gap-1.5">
                     <i class="fas fa-magic text-[9px]"></i>
                     <span class="hidden sm:inline">AI GEN</span><span class="sm:hidden">AI</span>
                 </button>
+                <button onclick="showBgRemoveView()" class="hover:text-purple-400 flex items-center gap-1.5">
+                    <i class="fas fa-scissors text-[9px]"></i>
+                    <span class="hidden sm:inline">BG REMOVE</span><span class="sm:hidden">BG</span>
+                </button>
             </nav>
         </div>
-        <button onclick="logout()" class="w-9 h-9 md:w-10 md:h-10 rounded-full bg-zinc-900 flex items-center justify-center border border-white/10 hover:border-emerald-500/50">
-            <i class="fas fa-sign-out-alt text-zinc-500 text-xs"></i>
-        </button>
+        <div class="flex items-center gap-3">
+            <!-- WS status indicator -->
+            <div class="flex items-center gap-1.5" title="System Link">
+                <span id="ws-dot" class="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.6)] transition-colors duration-500"></span>
+                <span class="text-[8px] font-bold uppercase tracking-widest text-zinc-600 hidden md:block">Link</span>
+            </div>
+            <button onclick="logout()" class="w-9 h-9 md:w-10 md:h-10 rounded-full bg-zinc-900 flex items-center justify-center border border-white/10 hover:border-emerald-500/50">
+                <i class="fas fa-sign-out-alt text-zinc-500 text-xs"></i>
+            </button>
+        </div>
     </header>
 
     <div class="flex-1 flex flex-col md:flex-row overflow-hidden">
         <!-- Sidebar -->
         <aside class="sidebar-responsive border-b md:border-b-0 md:border-r border-white/5 p-4 md:p-6 space-y-4 md:space-y-5 bg-zinc-950/40 overflow-x-auto md:overflow-y-auto shrink-0 custom-scroll">
             <div class="flex flex-row md:flex-col gap-4 md:gap-5 w-full">
-                <!-- Balance card -->
-                <div class="flex-1 min-w-[140px] md:min-w-0">
-                    <p class="text-[9px] uppercase tracking-widest text-zinc-600 font-bold mb-2">Token Balance</p>
-                    <div class="p-4 glass-panel rounded-2xl border-white/5">
-                        <div class="flex justify-between items-end mb-3">
-                            <span id="usage-val" class="text-2xl md:text-3xl font-black text-white">--</span>
-                            <span class="text-[8px] font-bold text-zinc-600 uppercase tracking-widest mb-1">Tokens</span>
+                <!-- Multi-Quota Dashboard -->
+                <div class="flex-1 min-w-[140px] md:min-w-0 space-y-3">
+                    <p class="text-[9px] uppercase tracking-widest text-zinc-600 font-bold mb-1">Quota Dashboard</p>
+                    <!-- Upscaling -->
+                    <div class="p-3 glass-panel rounded-xl border-white/5">
+                        <div class="flex justify-between items-end mb-1.5">
+                            <span class="text-[8px] font-black text-zinc-500 uppercase tracking-widest">Upscaling</span>
+                            <span id="usage-val" class="text-sm font-black text-white">--</span>
                         </div>
-                        <div class="h-1.5 w-full bg-zinc-900 rounded-full overflow-hidden mb-2">
+                        <div class="h-1 w-full bg-zinc-900 rounded-full overflow-hidden mb-1">
                             <div id="usage-bar" class="h-full bg-emerald-500 rounded-full transition-all duration-700" style="width:0%"></div>
                         </div>
                         <p id="usage-text" class="text-[8px] text-zinc-600 font-bold uppercase tracking-widest truncate">Loading...</p>
                     </div>
+                    <!-- AI Generation -->
+                    <div class="p-3 glass-panel rounded-xl border-white/5">
+                        <div class="flex justify-between items-end mb-1.5">
+                            <span class="text-[8px] font-black text-zinc-500 uppercase tracking-widest">AI Gen</span>
+                            <span id="gen-val" class="text-sm font-black text-white">--</span>
+                        </div>
+                        <div class="h-1 w-full bg-zinc-900 rounded-full overflow-hidden mb-1">
+                            <div id="gen-bar" class="h-full bg-sky-500 rounded-full transition-all duration-700" style="width:0%"></div>
+                        </div>
+                        <p id="gen-text" class="text-[8px] text-zinc-600 font-bold uppercase tracking-widest truncate">Loading...</p>
+                    </div>
+                    <!-- Background Removal -->
+                    <div class="p-3 glass-panel rounded-xl border-white/5">
+                        <div class="flex justify-between items-end mb-1.5">
+                            <span class="text-[8px] font-black text-zinc-500 uppercase tracking-widest">BG Remove</span>
+                            <span id="bg-val" class="text-sm font-black text-white">--</span>
+                        </div>
+                        <div class="h-1 w-full bg-zinc-900 rounded-full overflow-hidden mb-1">
+                            <div id="bg-bar" class="h-full bg-violet-500 rounded-full transition-all duration-700" style="width:0%"></div>
+                        </div>
+                        <p id="bg-text" class="text-[8px] text-zinc-600 font-bold uppercase tracking-widest truncate">Loading...</p>
+                    </div>
                 </div>
-                <!-- AI Gen shortcut -->
-                <div class="flex-1 min-w-[120px] md:min-w-0">
+                <!-- Quick Launch + History -->
+                <div class="flex-1 min-w-[120px] md:min-w-0 space-y-2">
                     <p class="hidden md:block text-[9px] uppercase tracking-widest text-zinc-600 font-bold mb-2">Quick Launch</p>
-                    <button onclick="redirectToAppPage()"
+                    <button onclick="showAiGenView()"
                             class="w-full p-3.5 border border-emerald-500/20 bg-emerald-500/5 rounded-xl flex items-center justify-between text-[9px] font-bold uppercase tracking-widest hover:bg-emerald-500 hover:text-black group">
                         <span class="flex items-center gap-2"><i class="fas fa-magic"></i> AI GEN</span>
+                        <i class="fas fa-chevron-right opacity-40 group-hover:opacity-100 hidden md:block"></i>
+                    </button>
+                    <button onclick="showBgRemoveView()"
+                            class="w-full p-3.5 border border-violet-500/20 bg-violet-500/5 rounded-xl flex items-center justify-between text-[9px] font-bold uppercase tracking-widest hover:bg-violet-500 hover:text-white group">
+                        <span class="flex items-center gap-2"><i class="fas fa-scissors"></i> BG REMOVE</span>
+                        <i class="fas fa-chevron-right opacity-40 group-hover:opacity-100 hidden md:block"></i>
+                    </button>
+                    <button onclick="openHistory()"
+                            class="w-full p-3.5 border border-white/5 bg-white/[0.02] rounded-xl flex items-center justify-between text-[9px] font-bold uppercase tracking-widest hover:bg-white/5 hover:text-white group text-zinc-500">
+                        <span class="flex items-center gap-2"><i class="fas fa-clock-rotate-left"></i> History</span>
                         <i class="fas fa-chevron-right opacity-40 group-hover:opacity-100 hidden md:block"></i>
                     </button>
                 </div>
@@ -772,6 +866,253 @@
         </section>
     </div>
 </main>
+
+<!-- ========================================
+     BG REMOVE VIEW (overlay inside app)
+     ======================================== -->
+<div id="bg-remove-view" class="hidden fixed inset-0 z-[90] flex flex-col bg-[#050505]/98 backdrop-blur-xl">
+    <!-- Header -->
+    <header class="h-16 md:h-20 border-b border-white/5 flex items-center justify-between px-4 md:px-8 bg-black/60 backdrop-blur-lg shrink-0">
+        <div class="flex items-center gap-4">
+            <button onclick="hideBgRemoveView()" class="w-9 h-9 rounded-full bg-zinc-900 flex items-center justify-center border border-white/10 hover:border-white/20">
+                <i class="fas fa-arrow-left text-zinc-400 text-xs"></i>
+            </button>
+            <div class="flex items-center gap-2">
+                <div class="w-6 h-6 bg-violet-500 rounded-md flex items-center justify-center">
+                    <i class="fas fa-scissors text-white text-[9px]"></i>
+                </div>
+                <span class="font-black tracking-tighter text-sm md:text-base uppercase text-white">BG Remove</span>
+            </div>
+        </div>
+        <span class="text-[9px] font-bold uppercase tracking-widest text-zinc-600">Powered by ClipDrop</span>
+    </header>
+
+    <div class="flex-1 flex flex-col p-3 md:p-6 overflow-hidden">
+        <div id="bg-chat-messages" class="flex-1 overflow-y-auto space-y-6 custom-scroll pb-6 px-1 md:px-4">
+            <div id="bg-empty-state" class="h-full flex flex-col items-center justify-center text-center opacity-30 px-4 select-none">
+                <div class="w-14 h-14 mb-4 bg-zinc-900 rounded-2xl flex items-center justify-center border border-dashed border-zinc-700">
+                    <i class="fas fa-scissors text-xl text-zinc-600"></i>
+                </div>
+                <h3 class="text-sm font-bold mb-1">Ready to remove backgrounds</h3>
+                <p class="text-[11px] text-zinc-600">Upload any image to instantly strip its background.</p>
+            </div>
+        </div>
+
+        <!-- Input Controls -->
+        <div class="max-w-4xl mx-auto w-full pt-4 shrink-0">
+            <!-- File preview -->
+            <div id="bg-file-preview" class="hidden mb-3 p-3 glass-panel rounded-2xl animate-premium flex items-center justify-between" style="border-color: rgba(139,92,246,0.2);">
+                <div class="flex items-center gap-3 overflow-hidden">
+                    <img id="bg-preview-img" src="" class="w-10 h-10 md:w-12 md:h-12 rounded-xl object-cover border border-white/10 shrink-0">
+                    <div class="overflow-hidden">
+                        <p id="bg-target-name" class="text-[10px] font-bold text-white uppercase tracking-wider truncate"></p>
+                        <p class="text-[9px] text-violet-400 font-bold uppercase tracking-wider">Source staged ✓</p>
+                    </div>
+                </div>
+                <button onclick="clearBgFile()" class="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center shrink-0">
+                    <i class="fas fa-times text-xs text-zinc-400"></i>
+                </button>
+            </div>
+
+            <!-- Upload bar -->
+            <div class="glass-panel p-1.5 md:p-2 rounded-full border border-white/10 flex items-center gap-2 shadow-2xl">
+                <label class="w-10 h-10 md:w-12 md:h-12 flex items-center justify-center bg-violet-500 text-white rounded-full cursor-pointer hover:scale-95 shrink-0">
+                    <i class="fas fa-arrow-up text-sm"></i>
+                    <input type="file" id="bg-file-input" class="hidden" accept="image/*" onchange="handleBgFile(event)">
+                </label>
+                <input type="text" id="bg-status-text" readonly placeholder="Select image to remove background..."
+                       class="flex-1 bg-transparent px-2 outline-none text-[10px] md:text-xs text-zinc-500 font-medium truncate">
+                <button id="bg-process-btn" disabled onclick="startBgProcessing()"
+                        class="px-5 md:px-8 py-3 md:py-3.5 bg-violet-500 text-white font-black text-[9px] md:text-[10px] uppercase tracking-widest rounded-full disabled:opacity-20 hover:bg-violet-400 shrink-0">
+                    REMOVE <i class="fas fa-scissors ml-1"></i>
+                </button>
+            </div>
+            <p class="text-[8px] text-zinc-700 text-center mt-3 uppercase tracking-widest font-bold">ClipDrop Neural Background Engine</p>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================
+     AI GENERATION VIEW (from page.html — embedded)
+     ======================================== -->
+<div id="ai-gen-view" class="hidden fixed inset-0 z-[90] flex bg-[#0a0a0a]">
+
+    <!-- Desktop Sidebar -->
+    <aside class="hidden lg:flex w-64 xl:w-72 border-r border-white/5 flex-col bg-[#0d0d0d] shrink-0">
+        <div class="p-5 border-b border-white/5 flex items-center justify-between">
+            <div class="flex items-center gap-2.5">
+                <div class="w-5 h-5 bg-emerald-500 rounded flex items-center justify-center">
+                    <i class="fas fa-magic text-[9px] text-black"></i>
+                </div>
+                <span class="font-black tracking-tighter text-xs uppercase">AI Synthesis</span>
+            </div>
+            <button onclick="hideAiGenView()" class="w-7 h-7 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center">
+                <i class="fas fa-arrow-left text-zinc-400 text-[10px]"></i>
+            </button>
+        </div>
+
+        <div class="flex-1 overflow-y-auto p-5 space-y-6 custom-scroll">
+            <!-- AI Gen Quota Donut -->
+            <div>
+                <p class="text-[9px] uppercase tracking-[0.2em] text-zinc-500 font-bold mb-3">Neural Quota</p>
+                <div class="bg-white/[0.03] rounded-2xl p-4 border border-white/5">
+                    <div class="relative w-28 h-28 mx-auto mb-3">
+                        <canvas id="aiQuotaChart"></canvas>
+                        <div class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+                            <span id="ai-quota-percent" class="text-base font-black text-white leading-none">0%</span>
+                            <span class="text-[7px] uppercase tracking-widest text-zinc-500 mt-0.5">Used</span>
+                        </div>
+                    </div>
+                    <div class="flex justify-around text-center">
+                        <div>
+                            <p id="ai-quota-used" class="text-xs font-black text-white">0</p>
+                            <p class="text-[8px] text-zinc-500 uppercase">Used</p>
+                        </div>
+                        <div class="w-px bg-white/10"></div>
+                        <div>
+                            <p id="ai-quota-limit" class="text-xs font-black text-white">0</p>
+                            <p class="text-[8px] text-zinc-500 uppercase">Limit</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- WS Status -->
+            <div>
+                <p class="text-[9px] uppercase tracking-[0.2em] text-zinc-500 font-bold mb-3">System</p>
+                <div class="flex items-center justify-between p-3 bg-white/[0.03] rounded-xl border border-white/5">
+                    <span class="text-[9px] font-bold uppercase tracking-widest text-zinc-400">Neural Link</span>
+                    <span id="ai-ws-dot" class="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.5)] transition-colors duration-500"></span>
+                </div>
+                <div class="mt-2 p-3 bg-white/[0.03] rounded-xl border border-white/5">
+                    <p id="ai-user-email" class="text-[10px] font-bold text-zinc-300 truncate">--</p>
+                    <p id="ai-user-expiry" class="text-[8px] text-zinc-500 uppercase tracking-tighter mt-0.5">Expiry: --</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="p-5 border-t border-white/5">
+            <button onclick="logout()" class="w-full flex items-center justify-center gap-2 py-2.5 text-[9px] font-bold uppercase tracking-widest text-zinc-600 hover:text-red-400 hover:bg-red-500/5 rounded-xl transition-all">
+                <i class="fas fa-power-off text-[8px]"></i> Terminate
+            </button>
+        </div>
+    </aside>
+
+    <!-- Main Generation Area -->
+    <section class="flex-1 flex flex-col min-w-0">
+        <!-- Top bar -->
+        <div class="h-14 border-b border-white/5 flex items-center justify-between px-4 lg:px-6 bg-black/50 backdrop-blur-md shrink-0">
+            <div class="flex items-center gap-3">
+                <button onclick="hideAiGenView()" class="lg:hidden w-8 h-8 flex items-center justify-center text-zinc-400 hover:text-white">
+                    <i class="fas fa-arrow-left text-sm"></i>
+                </button>
+                <div class="lg:hidden w-5 h-5 bg-emerald-500 rounded flex items-center justify-center">
+                    <i class="fas fa-magic text-[9px] text-black"></i>
+                </div>
+                <h2 class="font-black text-xs uppercase tracking-tighter">AI Generation</h2>
+            </div>
+            <div class="flex items-center gap-3">
+                <!-- Mobile quota pill -->
+                <div class="flex items-center gap-1.5 lg:hidden">
+                    <span id="ai-mobile-used" class="text-[9px] font-black text-emerald-400">--</span>
+                    <span class="text-[8px] text-zinc-600 font-bold">left</span>
+                </div>
+                <span id="ai-ws-dot-mobile" class="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_6px_rgba(239,68,68,0.5)] transition-colors duration-500"></span>
+            </div>
+        </div>
+
+        <!-- Generation display -->
+        <div id="ai-generation-display" class="flex-1 overflow-y-auto p-4 md:p-8 custom-scroll">
+            <!-- Empty state -->
+            <div id="ai-empty-state" class="h-full flex flex-col items-center justify-center text-center opacity-40 px-6 select-none">
+                <div class="w-16 h-16 mb-5 rounded-3xl border border-dashed border-zinc-700 flex items-center justify-center">
+                    <i class="fas fa-wand-magic-sparkles text-zinc-500 text-xl"></i>
+                </div>
+                <h3 class="text-base font-bold tracking-tight mb-1">Describe your vision</h3>
+                <p class="text-xs text-zinc-500 max-w-xs leading-relaxed">Type a prompt below and our neural engine will synthesize your image in seconds.</p>
+            </div>
+
+            <!-- Result container -->
+            <div id="ai-result-container" class="hidden max-w-2xl mx-auto w-full">
+                <!-- User prompt bubble -->
+                <div class="flex items-start gap-3 mb-5">
+                    <div class="w-7 h-7 rounded-lg bg-zinc-800 flex items-center justify-center shrink-0 border border-white/5">
+                        <i class="fas fa-user text-[9px] text-zinc-400"></i>
+                    </div>
+                    <p id="ai-active-prompt" class="text-sm text-zinc-300 leading-relaxed pt-0.5"></p>
+                </div>
+
+                <!-- Bot response -->
+                <div class="flex items-start gap-3">
+                    <div class="w-7 h-7 rounded-lg bg-emerald-500/10 flex items-center justify-center shrink-0 border border-emerald-500/20">
+                        <i class="fas fa-brain text-[9px] text-emerald-500"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="bg-zinc-900 rounded-2xl overflow-hidden border border-white/8 shadow-2xl relative">
+                            <img id="ai-generated-image" src="" class="w-full max-w-lg aspect-square object-cover opacity-0 transition-opacity duration-700 block">
+                            <div id="ai-loader-overlay" class="absolute inset-0 flex flex-col items-center justify-center bg-zinc-900/90 backdrop-blur-md">
+                                <div class="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full spinner mb-3"></div>
+                                <p class="text-[8px] font-bold uppercase tracking-[0.2em] text-emerald-500 animate-pulse">Synthesizing...</p>
+                                <p id="ai-timer-text" class="text-zinc-500 text-[8px] mt-1 font-mono">0.0s</p>
+                            </div>
+                        </div>
+                        <div id="ai-action-bar" class="hidden mt-3 flex flex-wrap items-center gap-2">
+                            <button onclick="aiDownloadImage()" class="flex-1 sm:flex-none px-4 py-2.5 bg-zinc-900 border border-white/5 rounded-xl text-[9px] font-bold uppercase tracking-widest hover:bg-zinc-800 transition-all">
+                                <i class="fas fa-download mr-1.5"></i> Save PNG
+                            </button>
+                            <button onclick="aiCopyLink()" class="flex-1 sm:flex-none px-4 py-2.5 bg-zinc-900 border border-white/5 rounded-xl text-[9px] font-bold uppercase tracking-widest hover:bg-zinc-800 transition-all">
+                                <i class="fas fa-link mr-1.5"></i> Share Link
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Prompt input -->
+        <div class="p-4 md:p-6 bg-gradient-to-t from-[#0a0a0a] via-[#0a0a0a] to-transparent shrink-0">
+            <div class="max-w-2xl mx-auto w-full">
+                <div class="bg-[#161616] border border-white/10 rounded-2xl p-1.5 shadow-2xl focus-within:border-emerald-500/30 transition-all">
+                    <div class="flex items-center px-3 gap-2">
+                        <input type="text" id="ai-prompt-input" autocomplete="off" placeholder="Describe an image to synthesize..."
+                            class="flex-1 bg-transparent py-3 md:py-3.5 text-sm outline-none placeholder:text-zinc-600"
+                            onkeydown="if(event.key==='Enter') triggerAiSynthesis()">
+                        <button id="ai-synth-btn" onclick="triggerAiSynthesis()"
+                            class="w-10 h-10 bg-emerald-500 text-black rounded-xl hover:bg-emerald-400 active:scale-90 transition-all flex items-center justify-center shrink-0 shadow-[0_0_15px_rgba(16,185,129,0.2)]">
+                            <i class="fas fa-paper-plane text-xs"></i>
+                        </button>
+                    </div>
+                </div>
+                <p class="text-[7px] text-zinc-700 text-center mt-2 uppercase tracking-[0.2em] font-medium">Powered by PIXUP8K Neural Architecture · DALL·E 3</p>
+            </div>
+        </div>
+    </section>
+</div>
+
+<!-- Toast (shared) -->
+<div id="app-toast" class="fixed bottom-24 lg:bottom-10 left-1/2 -translate-x-1/2 px-6 py-3 bg-white text-black text-[9px] font-bold uppercase tracking-widest rounded-full opacity-0 translate-y-8 transition-all duration-500 z-[250] shadow-2xl whitespace-nowrap pointer-events-none">
+    Notification
+</div>
+
+<!-- ========================================
+     HISTORY MODAL
+     ======================================== -->
+<div id="history-modal" class="hidden fixed inset-0 z-[150] flex items-end md:items-center justify-center bg-black/80 backdrop-blur-xl p-0 md:p-4">
+    <div class="w-full md:max-w-2xl bg-zinc-950 border border-white/8 rounded-t-[28px] md:rounded-[28px] animate-premium max-h-[85vh] flex flex-col">
+        <div class="flex items-center justify-between p-5 border-b border-white/5 shrink-0">
+            <div class="flex items-center gap-2.5">
+                <i class="fas fa-clock-rotate-left text-emerald-500 text-sm"></i>
+                <h3 class="font-black text-white text-sm uppercase tracking-tight">Processing History</h3>
+            </div>
+            <button onclick="closeHistory()" class="w-8 h-8 rounded-full bg-white/5 hover:bg-white/10 flex items-center justify-center">
+                <i class="fas fa-times text-zinc-400 text-xs"></i>
+            </button>
+        </div>
+        <div id="history-list" class="flex-1 overflow-y-auto custom-scroll p-5 space-y-3">
+            <div class="text-center text-zinc-600 text-[10px] font-bold uppercase tracking-widest py-8">Loading history...</div>
+        </div>
+    </div>
+</div>
 
 <!-- ========================================
      SCRIPTS (ALL ORIGINAL LOGIC PRESERVED)
@@ -845,8 +1186,17 @@ function showLogin(){
 function hideLogin(){
     document.getElementById('login-view').classList.add('hidden');
 }
-function redirectToAppPage(){
-    window.location.href = '/app';
+function redirectToAppPage(){ showAiGenView(); } // kept for any residual calls
+function showAiGenView(){
+    document.getElementById('ai-gen-view').classList.remove('hidden');
+    // sync sidebar info
+    if(window._lastUser){
+        document.getElementById('ai-user-email').innerText = window._lastUser.email || '--';
+        document.getElementById('ai-user-expiry').innerText = `Expiry: ${window._lastUser.expires_at ? new Date(window._lastUser.expires_at).toLocaleDateString() : '--'}`;
+    }
+}
+function hideAiGenView(){
+    document.getElementById('ai-gen-view').classList.add('hidden');
 }
 function openWhatsApp(planName){
     const phoneNumber = "923260341402";
@@ -887,18 +1237,50 @@ async function enterApp(){
     document.getElementById('welcome-screen').classList.add('hidden');
     document.getElementById('login-view').classList.add('hidden');
     document.getElementById('app-view').classList.remove('hidden');
-    refreshProfile();
+    await refreshProfile();
+    initWS();
 }
 
 async function refreshProfile(){
     try {
         const res = await fetch('/me', { headers: {'Authorization': `Bearer ${authToken}`} });
         const user = await res.json();
+        window._lastUser = user;
+
+        // Upscaling quota (original IDs preserved)
         document.getElementById('usage-text').innerText = `${user.images_used} / ${user.image_limit} Tokens used`;
         document.getElementById('usage-val').innerText = user.image_limit - user.images_used;
         document.getElementById('usage-bar').style.width = (user.images_used / user.image_limit * 100) + '%';
+
+        // AI Generation quota
+        const genUsed  = user.image_generations_used  || 0;
+        const genLimit = user.image_generations_limit || 0;
+        const genRemain = genLimit - genUsed;
+        document.getElementById('gen-val').innerText  = genRemain;
+        document.getElementById('gen-text').innerText = `${genUsed} / ${genLimit} used`;
+        document.getElementById('gen-bar').style.width = (genLimit ? (genUsed / genLimit * 100) : 0) + '%';
+
+        // AI gen sidebar
+        document.getElementById('ai-quota-used').innerText    = genUsed;
+        document.getElementById('ai-quota-limit').innerText   = genLimit;
+        document.getElementById('ai-mobile-used').innerText   = genRemain;
+        const perc = genLimit ? Math.round(genUsed / genLimit * 100) : 0;
+        document.getElementById('ai-quota-percent').innerText = `${perc}%`;
+        renderAiQuotaChart(genUsed, genLimit);
+
+        // User info in AI gen sidebar
+        document.getElementById('ai-user-email').innerText  = user.email || '--';
+        document.getElementById('ai-user-expiry').innerText = `Expiry: ${user.expires_at ? new Date(user.expires_at).toLocaleDateString() : '--'}`;
+
+        // Background Removal quota
+        const bgUsed  = user.background_removals_used  || 0;
+        const bgLimit = user.background_removals_limit || 0;
+        document.getElementById('bg-val').innerText  = bgLimit - bgUsed;
+        document.getElementById('bg-text').innerText = `${bgUsed} / ${bgLimit} used`;
+        document.getElementById('bg-bar').style.width = (bgLimit ? (bgUsed / bgLimit * 100) : 0) + '%';
+
     } catch {
-        document.getElementById('usage-val').innerText = "∞";
+        document.getElementById('usage-val').innerText  = "∞";
         document.getElementById('usage-text').innerText = "Trial Mode Active";
     }
 }
@@ -1028,6 +1410,357 @@ async function startProcessing(){
 }
 
 function logout(){ localStorage.removeItem('pro_token'); window.location.reload(); }
+
+// =========================================================
+// WEBSOCKET (WS / WSS — auto-detect protocol)
+// =========================================================
+let ws = null;
+let _aiQuotaChart = null;
+
+function initWS(){
+    if(!authToken) return;
+    const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    ws = new WebSocket(`${protocol}://${window.location.host}/ws/${authToken}`);
+
+    const dots = () => [
+        document.getElementById('ws-dot'),
+        document.getElementById('ai-ws-dot'),
+        document.getElementById('ai-ws-dot-mobile')
+    ].filter(Boolean);
+
+    ws.onopen = () => {
+        dots().forEach(d => {
+            d.classList.replace('bg-red-500','bg-emerald-500');
+            d.style.boxShadow = '0 0 8px rgba(16,185,129,0.6)';
+        });
+        setInterval(() => { if(ws && ws.readyState === 1) ws.send('ping'); }, 20000);
+    };
+
+    ws.onmessage = (e) => {
+        try {
+            const msg = JSON.parse(e.data);
+            if(msg.type === 'notification' || msg.type === 'pong') showAppToast(msg.data || '✓');
+            if(msg.type === 'background_removed') refreshProfile();
+        } catch {}
+    };
+
+    ws.onclose = () => {
+        dots().forEach(d => {
+            d.classList.replace('bg-emerald-500','bg-red-500');
+            d.style.boxShadow = '0 0 6px rgba(239,68,68,0.5)';
+        });
+        setTimeout(initWS, 5000); // auto-reconnect
+    };
+
+    ws.onerror = () => ws.close();
+}
+
+function showAppToast(msg){
+    const t = document.getElementById('app-toast');
+    if(!t) return;
+    t.innerText = msg;
+    t.classList.remove('opacity-0','translate-y-8');
+    clearTimeout(t._timer);
+    t._timer = setTimeout(() => t.classList.add('opacity-0','translate-y-8'), 3000);
+}
+
+// =========================================================
+// AI GENERATION — QUOTA CHART
+// =========================================================
+function renderAiQuotaChart(used, limit){
+    const canvas = document.getElementById('aiQuotaChart');
+    if(!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const remains = Math.max(0, limit - used);
+    if(_aiQuotaChart) _aiQuotaChart.destroy();
+    _aiQuotaChart = new Chart(ctx, {
+        type: 'doughnut',
+        data: {
+            datasets: [{
+                data: [used, remains],
+                backgroundColor: ['#10b981', 'rgba(255,255,255,0.04)'],
+                borderWidth: 0,
+                hoverOffset: 0
+            }]
+        },
+        options: {
+            cutout: '84%',
+            plugins: { legend: { display: false }, tooltip: { enabled: false } },
+            maintainAspectRatio: false
+        }
+    });
+}
+
+// =========================================================
+// AI GENERATION — SYNTHESIS
+// =========================================================
+async function triggerAiSynthesis(){
+    const promptInput = document.getElementById('ai-prompt-input');
+    const prompt = promptInput.value.trim();
+    const btn = document.getElementById('ai-synth-btn');
+    if(!prompt) { showAppToast('Prompt required'); return; }
+
+    // Show result area, hide empty state
+    document.getElementById('ai-empty-state').classList.add('hidden');
+    document.getElementById('ai-result-container').classList.remove('hidden');
+    document.getElementById('ai-loader-overlay').classList.remove('hidden');
+    document.getElementById('ai-action-bar').classList.add('hidden');
+    const genImg = document.getElementById('ai-generated-image');
+    genImg.classList.add('opacity-0');
+    document.getElementById('ai-active-prompt').innerText = prompt;
+
+    btn.disabled = true;
+    btn.classList.add('opacity-50');
+
+    let seconds = 0;
+    const timer = setInterval(() => {
+        seconds += 0.1;
+        const el = document.getElementById('ai-timer-text');
+        if(el) el.innerText = `${seconds.toFixed(1)}s`;
+    }, 100);
+
+    try {
+        const formData = new FormData();
+        formData.append('prompt', prompt);
+        const res = await fetch('/images/generate', {
+            method: 'POST',
+            headers: { 'Authorization': `Bearer ${authToken}` },
+            body: formData
+        });
+        const data = await res.json();
+
+        if(res.ok){
+            genImg.src = data.download_url;
+            genImg.onload = () => {
+                clearInterval(timer);
+                document.getElementById('ai-loader-overlay').classList.add('hidden');
+                document.getElementById('ai-action-bar').classList.remove('hidden');
+                genImg.classList.remove('opacity-0');
+                btn.disabled = false;
+                btn.classList.remove('opacity-50');
+                promptInput.value = '';
+                refreshProfile();
+                showAppToast('Synthesis Complete');
+                const display = document.getElementById('ai-generation-display');
+                if(display) display.scrollTo({ top: display.scrollHeight, behavior: 'smooth' });
+            };
+        } else {
+            throw new Error(data.detail || 'Quota Exceeded');
+        }
+    } catch(err){
+        clearInterval(timer);
+        showAppToast(err.message);
+        btn.disabled = false;
+        btn.classList.remove('opacity-50');
+        document.getElementById('ai-loader-overlay').classList.add('hidden');
+    }
+}
+
+function aiDownloadImage(){
+    const url = document.getElementById('ai-generated-image').src;
+    if(!url) return;
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `PIXUP8K_${Date.now()}.png`;
+    a.click();
+}
+
+function aiCopyLink(){
+    const url = document.getElementById('ai-generated-image').src;
+    if(!url) return;
+    const fullUrl = url.startsWith('http') ? url : window.location.origin + url;
+    navigator.clipboard ? navigator.clipboard.writeText(fullUrl).then(() => showAppToast('Link Copied')) : showAppToast('Copy not supported');
+}
+// =========================================================
+let activeBgFile = null;
+
+function showBgRemoveView(){
+    document.getElementById('bg-remove-view').classList.remove('hidden');
+}
+function hideBgRemoveView(){
+    document.getElementById('bg-remove-view').classList.add('hidden');
+}
+
+function handleBgFile(e){
+    activeBgFile = e.target.files[0];
+    if(activeBgFile){
+        document.getElementById('bg-empty-state').classList.add('hidden');
+        document.getElementById('bg-target-name').innerText = activeBgFile.name;
+        document.getElementById('bg-file-preview').classList.remove('hidden');
+        document.getElementById('bg-status-text').value = `STAGED: ${activeBgFile.name}`;
+        document.getElementById('bg-preview-img').src = URL.createObjectURL(activeBgFile);
+        document.getElementById('bg-process-btn').disabled = false;
+    }
+}
+
+function clearBgFile(){
+    activeBgFile = null;
+    document.getElementById('bg-file-input').value = '';
+    document.getElementById('bg-file-preview').classList.add('hidden');
+    document.getElementById('bg-status-text').value = '';
+    document.getElementById('bg-process-btn').disabled = true;
+}
+
+async function startBgProcessing(){
+    if(!activeBgFile) return;
+    const container = document.getElementById('bg-chat-messages');
+    const bubbleId = 'bg-' + Date.now();
+    const wrap = document.createElement('div');
+    wrap.className = 'animate-premium max-w-4xl mx-auto w-full mb-8 px-2 md:px-0';
+    wrap.innerHTML = `
+        <div class="glass-panel rounded-[24px] md:rounded-[36px] overflow-hidden p-5 md:p-8 border-white/10 bg-zinc-950/60">
+            <div class="flex justify-between items-center mb-5">
+                <div class="flex items-center gap-3">
+                    <div class="w-2 h-2 rounded-full bg-violet-500 shadow-[0_0_8px_rgba(139,92,246,0.8)]"></div>
+                    <span class="text-[9px] font-black uppercase tracking-widest text-violet-400">Removing Background</span>
+                    <span class="text-[8px] font-semibold text-zinc-700">#${bubbleId.slice(-6)}</span>
+                </div>
+                <span id="perc-${bubbleId}" class="text-[11px] font-black text-white tabular-nums">0%</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mb-5">
+                <div class="space-y-2">
+                    <p class="text-[8px] font-black text-zinc-600 uppercase tracking-widest">Original</p>
+                    <div class="aspect-square bg-zinc-900/80 rounded-2xl overflow-hidden border border-white/5">
+                        <img src="${URL.createObjectURL(activeBgFile)}" class="w-full h-full object-cover">
+                    </div>
+                </div>
+                <div class="space-y-2">
+                    <p class="text-[8px] font-black text-zinc-600 uppercase tracking-widest">Background Removed</p>
+                    <div class="aspect-square bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMjAiIGhlaWdodD0iMjAiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjEwIiBoZWlnaHQ9IjEwIiBmaWxsPSIjMzMzIi8+PHJlY3QgeD0iMTAiIHk9IjEwIiB3aWR0aD0iMTAiIGhlaWdodD0iMTAiIGZpbGw9IiMzMzMiLz48cmVjdCB4PSIxMCIgd2lkdGg9IjEwIiBoZWlnaHQ9IjEwIiBmaWxsPSIjMjIyIi8+PHJlY3QgeT0iMTAiIHdpZHRoPSIxMCIgaGVpZ2h0PSIxMCIgZmlsbD0iIzIyMiIvPjwvc3ZnPg==')] rounded-2xl overflow-hidden border border-white/5 relative">
+                        <img id="result-${bubbleId}" src="" class="w-full h-full object-contain opacity-0 transition-opacity duration-1000">
+                        <div id="loader-${bubbleId}" class="absolute inset-0 flex flex-col items-center justify-center bg-black/50 backdrop-blur-sm">
+                            <div class="w-8 h-8 border-2 border-violet-500 border-t-transparent rounded-full spinner mb-3"></div>
+                            <p class="text-[9px] text-zinc-500 font-bold uppercase tracking-widest">Removing BG...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="h-1 w-full bg-zinc-900 rounded-full overflow-hidden mb-5">
+                <div id="bar-${bubbleId}" class="h-full bg-gradient-to-r from-violet-600 to-violet-400 w-0 transition-all duration-[4000ms] rounded-full"></div>
+            </div>
+
+            <div id="actions-${bubbleId}" class="hidden flex flex-col md:flex-row justify-between items-center gap-4 pt-5 border-t border-white/5 animate-premium">
+                <div class="flex items-center gap-2">
+                    <i class="fas fa-check-circle text-violet-400 text-sm"></i>
+                    <p class="text-[9px] font-bold text-zinc-400 uppercase tracking-wider">Background Removed</p>
+                </div>
+                <div class="flex gap-3 w-full md:w-auto">
+                    <button onclick="this.closest('.animate-premium').remove()" class="flex-1 md:flex-none text-[10px] font-bold uppercase tracking-widest text-zinc-600 hover:text-zinc-300 px-4 py-2.5 rounded-xl border border-white/5 hover:border-white/10">Dismiss</button>
+                    <a id="dl-${bubbleId}" href="#" download class="flex-1 md:flex-none text-center px-6 py-2.5 rounded-xl bg-violet-500 text-white text-[10px] font-black uppercase tracking-widest hover:bg-violet-400 transition-colors">
+                        <i class="fas fa-download mr-1.5"></i>Download PNG
+                    </a>
+                </div>
+            </div>
+        </div>
+    `;
+    container.prepend(wrap);
+
+    setTimeout(() => {
+        const bar = document.getElementById(`bar-${bubbleId}`);
+        if(bar) bar.style.width = '100%';
+        let p = 0;
+        const interval = setInterval(() => {
+            p += 1;
+            const perc = document.getElementById(`perc-${bubbleId}`);
+            if(perc) perc.innerText = p + '%';
+            if(p >= 100) clearInterval(interval);
+        }, 35);
+    }, 100);
+
+    const formData = new FormData();
+    formData.append('file', activeBgFile);
+
+    try {
+        const res = await fetch('/images/remove-background', {
+            method: 'POST',
+            headers: {'Authorization': `Bearer ${authToken}`},
+            body: formData
+        });
+        const data = await res.json();
+        if(res.ok){
+            setTimeout(() => {
+                const resultImg = document.getElementById(`result-${bubbleId}`);
+                if(resultImg){ resultImg.src = data.download_url; resultImg.classList.replace('opacity-0', 'opacity-100'); }
+                const loader = document.getElementById(`loader-${bubbleId}`);
+                if(loader) loader.remove();
+                const actions = document.getElementById(`actions-${bubbleId}`);
+                if(actions) actions.classList.remove('hidden');
+                const dl = document.getElementById(`dl-${bubbleId}`);
+                if(dl) dl.href = data.download_url;
+                refreshProfile();
+                clearBgFile();
+            }, 4200);
+        } else {
+            setTimeout(() => {
+                const loader = document.getElementById(`loader-${bubbleId}`);
+                if(loader) loader.innerHTML = `<p class="text-[9px] text-rose-400 font-bold uppercase">${data.detail || 'Processing failed'}</p>`;
+            }, 1000);
+        }
+    } catch {
+        setTimeout(() => {
+            const loader = document.getElementById(`loader-${bubbleId}`);
+            if(loader) loader.innerHTML = `<p class="text-[9px] text-rose-400 font-bold uppercase">Connection error</p>`;
+        }, 1000);
+    }
+}
+
+// =========================================================
+// HISTORY FEATURE
+// =========================================================
+const TYPE_META = {
+    upscale:            { label: 'Upscale',    color: 'text-emerald-400', icon: 'fa-expand',          badge: 'bg-emerald-500/15 text-emerald-400' },
+    generation:         { label: 'AI Gen',     color: 'text-sky-400',     icon: 'fa-magic',            badge: 'bg-sky-500/15 text-sky-400' },
+    background_removal: { label: 'BG Remove',  color: 'text-violet-400',  icon: 'fa-scissors',         badge: 'bg-violet-500/15 text-violet-400' }
+};
+
+async function openHistory(){
+    document.getElementById('history-modal').classList.remove('hidden');
+    const list = document.getElementById('history-list');
+    list.innerHTML = '<div class="text-center text-zinc-600 text-[10px] font-bold uppercase tracking-widest py-8">Loading history...</div>';
+    try {
+        const res = await fetch('/images/history', { headers: {'Authorization': `Bearer ${authToken}`} });
+        const items = await res.json();
+        if(!items.length){
+            list.innerHTML = '<div class="text-center text-zinc-600 text-[10px] font-bold uppercase tracking-widest py-8">No history yet. Start processing!</div>';
+            return;
+        }
+        list.innerHTML = items.map(item => {
+            const meta = TYPE_META[item.type] || { label: item.type, color: 'text-zinc-400', icon: 'fa-image', badge: 'bg-zinc-800 text-zinc-400' };
+            const date = item.created_at ? new Date(item.created_at).toLocaleDateString('en-US', { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' }) : '—';
+            const extraInfo = item.prompt
+                ? `<p class="text-[9px] text-zinc-500 truncate max-w-[200px]">"${item.prompt}"</p>`
+                : item.ai_used !== null && item.ai_used !== undefined
+                    ? `<p class="text-[9px] text-zinc-500">AI Enhanced: ${item.ai_used ? 'Yes' : 'No'}</p>`
+                    : '';
+            return `
+                <div class="flex items-center gap-4 p-3 bg-white/[0.025] rounded-2xl border border-white/5 hover:border-white/10 transition-colors">
+                    <div class="w-12 h-12 rounded-xl overflow-hidden bg-zinc-900 border border-white/5 shrink-0">
+                        <img src="${item.download_url || ''}" class="w-full h-full object-cover" onerror="this.style.display='none'">
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2 mb-1">
+                            <span class="text-[8px] font-black uppercase tracking-widest px-2 py-0.5 rounded-full ${meta.badge}">
+                                <i class="fas ${meta.icon} mr-1"></i>${meta.label}
+                            </span>
+                        </div>
+                        ${extraInfo}
+                        <p class="text-[8px] text-zinc-700 font-bold uppercase tracking-widest mt-0.5">${date}</p>
+                    </div>
+                    ${item.download_url ? `<a href="${item.download_url}" download class="w-9 h-9 rounded-full bg-white/5 hover:bg-emerald-500 hover:text-black flex items-center justify-center border border-white/5 shrink-0 transition-colors">
+                        <i class="fas fa-download text-xs text-zinc-400 hover:text-black"></i>
+                    </a>` : ''}
+                </div>`;
+        }).join('');
+    } catch {
+        list.innerHTML = '<div class="text-center text-rose-500 text-[10px] font-bold uppercase tracking-widest py-8">Failed to load history.</div>';
+    }
+}
+
+function closeHistory(){
+    document.getElementById('history-modal').classList.add('hidden');
+}
 
 window.onload = () => {
     init3D();
