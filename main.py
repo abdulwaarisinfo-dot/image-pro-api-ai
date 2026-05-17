@@ -79,7 +79,7 @@ except Exception as e:
 # =========================================================
 # FASTAPI APP
 # =========================================================
-app = FastAPI(title="ImageAI Pro API"
+app = FastAPI(title="ImageAI Pro API",
               docs_url= None,
               redoc_url=None,
               openapi_url=None
